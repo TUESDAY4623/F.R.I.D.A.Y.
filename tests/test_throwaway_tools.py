@@ -54,12 +54,17 @@ def test_throwaway_tools_register_and_lookup():
     assert registry.get("list_directory") is list_tool
 
 
+
+
+
 def test_policy_engine_allows_action():
     policy = PolicyEngine()
 
     decision = policy.check(
-        tool_name="read_file",
-        risk_level=RiskLevel.LOW,
+        action_name="read_file",
+        arguments={"path": "example.txt"},
     )
 
     assert decision == PolicyDecision.ALLOW
+
+
