@@ -1,94 +1,121 @@
-# Jarvis Desktop Agent
+# Jarvis Desktop Agent — Architecture & File-by-File Documentation
 
-Desktop Agent modular monolith architecture adhering to the Canonical Architecture (V1 Spec).
+## Phase 0 Status: Completed (Sujeet's Scope)
 
-## System Architecture
+Phase 0 sets up the core foundation for the Jarvis Desktop Agent as a **modular monolith** running within a single process with strict internal module boundaries. All requirements for Sujeet's scope are fully implemented, wired, and verified:
 
-### 1. Modular Monolith Design (Section 1)
-- **Single Process**: Runs as a single unified process with strict internal module boundaries.
-- **Strict Ownership**: Each component has one distinct responsibility per Section 4; no component silently absorbs another's responsibility.
-- **Closed Loop**: The core execution model is a closed loop, not a linear pipeline.
-
-```
-src/jarvis/
-├── types.py            # Core shared types (RiskLevel, TaskLifecycle, PolicyDecision, etc.)
-├── logger/             # [REAL] Event Logger (redaction, streaming, in-memory & file sinks)
-├── tools/              # [REAL CONTRACT] Tool Registry contract, registry, and tool manager stub
-├── orchestrator/       # [REAL LOOP] 11-step canonical loop explicit state machine & AgentOrchestrator
-├── state/              # [STUB] State Manager (runtime task truth, lifecycle status)
-├── observation/        # [STUB] Observation Manager (surface observation normalization)
-├── verification/       # [STUB] Verification Engine (compares observation vs expected outcome)
-├── policy/             # [STUB] Policy Engine (ALLOW / CONFIRM / DENY pass-through)
-├── approval/           # [STUB] Approval Manager (human-in-the-loop interaction)
-├── planner/            # [STUB] Planner (task graph generation)
-├── intent/             # [STUB] Intent / Context Manager
-├── profiler/           # [STUB] Task Profiler (task complexity/risk profile)
-├── memory/             # [STUB] Memory / Conversation Manager
-├── recovery/           # [STUB] Error / Recovery Manager (failure classification & recovery)
-├── router/             # [STUB] LLM Router
-├── resources/          # [STUB] Resource Manager
-├── connectivity/       # [STUB] Connectivity Manager
-├── vault/              # [STUB] Credential Vault
-├── context_budget/     # [STUB] Context Budget Manager
-└── response/           # [STUB] Response Manager
-```
+1. **Modular Monolith Foundation**: Configured Python project with `uv` and Hatchling packaging, establishing strict boundaries where components have single, non-overlapping ownership per Section 1 & Section 4.
+2. **Tool Registry Contract**: Defined as a formal Pydantic schema per Section 11 (`ToolContract`, `ToolRegistry`, `BaseTool`, `ToolResult`), enforcing safety invariants (e.g. MEDIUM risk requiring reversibility and rollback strategies; irreversible actions requiring HIGH risk).
+3. **Orchestrator 11-Step Canonical Loop**: Built as an explicit finite state machine (`CanonicalLoopStateMachine`) and task coordinator (`AgentOrchestrator`) per Section 2. Every single step functions as a no-op stub that logs its own name via the Event Logger.
+4. **Event Logger as First Real Component**: Complete, thread-safe implementation per Section 13 with sensitive data redaction (`[REDACTED]`), in-memory query buffer, file sink capability, and live streaming subscriber callbacks for Tanmay's UI log pane.
+5. **Component Stubs**: Subsystems defined per Section 4 responsibility table as typed interfaces and pass-through stubs so team members (Adarsh, Tanmay, Sujeet) have fixed contracts to build against in Phase 1+.
+6. **Deterministic Verification**: 100% test pass rate across 10 automated test cases, and clean end-to-end execution of the Phase 0 "Hello Loop".
 
 ---
 
-### 2. Tool Registry Contract (Section 11)
-Every tool must declare an immutable contract (`ToolContract`) before registration:
-- `name`: Unique tool name string.
-- `description`: Human and LLM capability description.
-- `input_schema`: JSON Schema dict of valid arguments.
-- `output_schema`: JSON Schema dict of return data.
-- `risk_level`: `RiskLevel.LOW`, `RiskLevel.MEDIUM`, or `RiskLevel.HIGH`.
-- `reversible`: `bool` indicating if side effects can be reversed.
-- `rollback_strategy`: String identifier of rollback mechanism (mandatory for `MEDIUM` risk).
-- `timeout`: Positive float execution timeout in seconds.
-- `idempotency`: `bool` indicating if repeated execution with same args is safe.
-- `required_capabilities`: List of required system capabilities.
-- `platform_support`: List of supported platforms (e.g. `["windows"]`).
+## Repository File Catalog: Why Each File Was Created & How It Is Used
 
-**Guardrails enforced by contract validation (Section 7 & 11):**
-- Any tool declared `reversible: False` must be `HIGH` risk.
-- Any tool declared `MEDIUM` risk must declare `reversible: True` and declare a `rollback_strategy`.
+### 1. Root Configuration & Project Files
+
+| File | Why It Was Created | What It Is Used For |
+|---|---|---|
+| [`pyproject.toml`](file:///D:/jarvis-desktop-agent/pyproject.toml) | Defines project packaging, Python dependencies, build system, and test configurations. | Standard PEP 621 configuration. Specifies `hatchling` as build backend, declares runtime dependencies (`pydantic`) and dev dependencies (`pytest`), and configures pytest module discovery (`pythonpath = ["src"]`). |
+| [`uv.lock`](file:///D:/jarvis-desktop-agent/uv.lock) | Deterministic dependency lockfile generated by `uv`. | Ensures exact package versions and transitive dependencies are reproducible across all developer machines (Sujeet, Adarsh, Tanmay). |
+| [`.python-version`](file:///D:/jarvis-desktop-agent/.python-version) | Declares required Python version (3.11). | Used by `uv` and Python version managers to pin the active Python interpreter. |
+| [`.gitignore`](file:///D:/jarvis-desktop-agent/.gitignore) | Filters out artifacts from version control. | Excludes Python bytecode (`__pycache__`), virtual environments (`.venv`), distribution folders (`dist/`, `build/`), and IDE caches. |
+| [`progress.md`](file:///D:/jarvis-desktop-agent/progress.md) | Date-wise build log per work session. | Maintains an append-only timeline (newest on top) documenting what was built, test results (exact pass/fail counts), and open/blocking items. |
+| [`main.py`](file:///D:/jarvis-desktop-agent/main.py) | Entry point executing the Phase 0 "Hello Loop". | Exercises the entire system: wires the Event Logger, connects a live subscriber callback (demonstrating how Tanmay's UI will stream events), registers a test tool verifying the Tool Registry contract, and executes the Orchestrator's 11-step canonical loop end-to-end. |
 
 ---
 
-### 3. Orchestrator 11-Step Loop (Section 2)
-The canonical execution sequence is implemented as an explicit state machine (`CanonicalLoopStateMachine`):
-1. **Check cancellation / deadline** (State Manager)
-2. **Observe current state** (Observation Manager)
-3. **Decide next action** (Orchestrator + Planner task graph + State)
-4. **Policy check** (Policy Engine)
-5. **Approval if required** (Approval Manager ↔ User)
-6. **Dispatch action** (Tool Manager → Tool)
-7. **Observe resulting state** (Observation Manager)
-8. **Verify expected outcome** (Verification Engine)
-9. **Update State** (State Manager)
-10. **Log event** (Event Logger)
-11. **Continue → retry → recover → replan → complete** (Orchestrator control flow)
+### 2. Core Shared Types
 
-Every step logs its own name through the Event Logger.
+| File | Why It Was Created | What It Is Used For |
+|---|---|---|
+| [`src/jarvis/types.py`](file:///D:/jarvis-desktop-agent/src/jarvis/types.py) | Shared enum definitions for cross-cutting concepts. | Contains canonical domain enums: `RiskLevel` (`LOW`, `MEDIUM`, `HIGH`), `TaskLifecycle` (11 states from CREATED to COMPLETED/FAILED/CANCELLED per Section 8), `PolicyDecision` (`ALLOW`, `CONFIRM`, `DENY`), `ApprovalDecision` (`APPROVE`, `DENY`, `CANCEL`), and `VerificationStatus` (`PASS`, `FAIL`). Prevents circular dependencies between modules. |
 
 ---
 
-### 4. Event Logger (Section 13) — First Real Component
-- Records structured `LogEvent`s tagged with `task_id`, `step_name`, `event_type`, and `timestamp`.
-- **Sensitive Data Redaction Guarantee**: Automatically sanitizes keys and strings matching credentials, tokens, passwords, and API keys (`[REDACTED]`).
-- **Live Streaming Subscribers**: Sinks/subscribers can be registered to stream logs in real-time (consumed by the UI log pane).
-- **In-Memory Query Buffer & Sinks**: Queryable by `task_id`, `event_type`, or log level.
+### 3. Event Logger Subsystem (`src/jarvis/logger/`) — First Real Component
+
+| File | Why It Was Created | What It Is Used For |
+|---|---|---|
+| [`src/jarvis/logger/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/logger/__init__.py) | Package initialization and public export interface. | Exports `EventLogger`, `get_logger`, `set_logger`, `LogEvent`, `EventType`, `LogLevel`, and `EventSensitivity`. |
+| [`src/jarvis/logger/events.py`](file:///D:/jarvis-desktop-agent/src/jarvis/logger/events.py) | Pydantic event schemas and event type categories per Section 13. | Defines `LogEvent`, `EventType` (covering loop steps, lifecycle changes, planning, tools, policy, approval, recovery), `LogLevel`, and human-readable string formatter `to_log_line()`. |
+| [`src/jarvis/logger/event_logger.py`](file:///D:/jarvis-desktop-agent/src/jarvis/logger/event_logger.py) | Thread-safe Event Logger implementation. | Ingests events, automatically redacts passwords/tokens/keys via `sanitize_value`, stores them in a memory ring buffer, optionally appends to JSONL disk storage, prints formatted lines to stderr, and invokes registered streaming callbacks (`add_subscriber`). |
 
 ---
 
-## Running the Hello Loop (Phase 0 Exit Criterion)
+### 4. Tool Registry Subsystem (`src/jarvis/tools/`)
 
-Execute the Phase 0 Hello Loop:
+| File | Why It Was Created | What It Is Used For |
+|---|---|---|
+| [`src/jarvis/tools/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/tools/__init__.py) | Package export interface for the tool subsystem. | Exports `ToolContract`, `BaseTool`, `ToolResult`, `ToolRegistry`, `get_tool_registry`, and `ToolManager`. |
+| [`src/jarvis/tools/contract.py`](file:///D:/jarvis-desktop-agent/src/jarvis/tools/contract.py) | Shared tool specification contract per Section 11. | Declares `ToolContract` with all 11 required fields (`name`, `description`, `input_schema`, `output_schema`, `risk_level`, `reversible`, `rollback_strategy`, `timeout`, `idempotency`, `required_capabilities`, `platform_support`). Validates safety rules: `reversible: False` must be HIGH risk; `MEDIUM` risk must have `reversible: True` + rollback strategy. Also defines abstract `BaseTool` and `ToolResult`. |
+| [`src/jarvis/tools/registry.py`](file:///D:/jarvis-desktop-agent/src/jarvis/tools/registry.py) | Central repository of available tools. | Validates and stores tools (`register`), checks availability (`has`), retrieves tools (`get`), and lists contracts (`list_tools`). Enforces unique tool names. |
+| [`src/jarvis/tools/manager.py`](file:///D:/jarvis-desktop-agent/src/jarvis/tools/manager.py) | Tool Manager stub for Phase 0 (to be completed in Phase 1 by Adarsh). | Dispatches actions to registered tools and normalizes return values into `ToolResult`. |
+
+---
+
+### 5. Orchestrator Subsystem (`src/jarvis/orchestrator/`)
+
+| File | Why It Was Created | What It Is Used For |
+|---|---|---|
+| [`src/jarvis/orchestrator/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/orchestrator/__init__.py) | Package export interface for the Orchestrator. | Exports `AgentOrchestrator`, `CanonicalLoopStateMachine`, `LoopStep`, `LoopContext`, and `LoopStatus`. |
+| [`src/jarvis/orchestrator/loop.py`](file:///D:/jarvis-desktop-agent/src/jarvis/orchestrator/loop.py) | Section 2 canonical 11-step loop state machine. | Implements `CanonicalLoopStateMachine`, explicitly defining each of the 11 steps as a method that logs its own name through Event Logger and calls the owning component stub. Maintains loop data in `LoopContext`. |
+| [`src/jarvis/orchestrator/orchestrator.py`](file:///D:/jarvis-desktop-agent/src/jarvis/orchestrator/orchestrator.py) | Central coordinator managing the task lifecycle. | Implements `AgentOrchestrator`. Initializes tasks in `StateManager`, records lifecycle events (`TASK_CREATED`, `LOOP_START`, `LOOP_END`, `TASK_COMPLETED`), drives the state machine cycle, and returns final execution status. |
+
+---
+
+### 6. Component Stubs (Section 4 Ownership Table)
+
+These stubs establish clean boundaries and typed contracts so future phases can be implemented without breaking existing code:
+
+| Module / File | Section 4 Role | Ownership & Phase 0 Behavior |
+|---|---|---|
+| [`src/jarvis/state/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/state/__init__.py) | State Manager | Owns runtime task truth (`task_id`, `lifecycle`, `plan_version`, `current_step`, `deadline`, `last_verified_state`). Manages in-memory task states. |
+| [`src/jarvis/observation/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/observation/__init__.py) | Observation Manager | Owns selecting and normalizing observation sources per surface. Returns standardized `Observation` objects. |
+| [`src/jarvis/verification/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/verification/__init__.py) | Verification Engine | Owns comparing observed state to expected outcome. Returns `VerificationResult` (`PASS`/`FAIL` + reason). |
+| [`src/jarvis/policy/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/policy/__init__.py) | Policy Engine | Owns evaluating risk tier. In Phase 0, functions as a pass-through returning `PolicyDecision.ALLOW`. |
+| [`src/jarvis/approval/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/approval/__init__.py) | Approval Manager | Owns human-in-the-loop interaction (presenting what/target/consequences/reversibility/why). In Phase 0, auto-approves. |
+| [`src/jarvis/planner/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/planner/__init__.py) | Planner | Owns task graph generation with expected outcomes per step. Returns `TaskGraph`. |
+| [`src/jarvis/recovery/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/recovery/__init__.py) | Error / Recovery Manager | Owns failure taxonomy, retry/replan budgets, backoff, and recovery actions. |
+| [`src/jarvis/intent/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/intent/__init__.py) | Intent / Context Manager | Owns determining user intent and flagging ambiguity. Returns `IntentResult`. |
+| [`src/jarvis/profiler/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/profiler/__init__.py) | Task Profiler | Owns structured requirements profiling (complexity, risk, privacy, latency). |
+| [`src/jarvis/input_processor/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/input_processor/__init__.py) | Input Processor | Owns STT, audio capture, text normalization, and capturing cancel signals. |
+| [`src/jarvis/memory/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/memory/__init__.py) | Memory / Conversation Manager | Owns conversation turns (short-term) and user preferences (long-term). |
+| [`src/jarvis/router/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/router/__init__.py) | LLM Router | Owns selecting model tier (local vs cloud). |
+| [`src/jarvis/resources/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/resources/__init__.py) | Resource Manager | Owns monitoring RAM/CPU/GPU/NPU and computing memory headroom. |
+| [`src/jarvis/connectivity/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/connectivity/__init__.py) | Connectivity Manager | Owns monitoring internet connectivity and offline status. |
+| [`src/jarvis/vault/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/vault/__init__.py) | Credential Vault | Owns Windows Credential Manager integration, preventing raw secret leakage. |
+| [`src/jarvis/context_budget/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/context_budget/__init__.py) | Context Budget Manager | Owns context trimming, summarization, and token budget enforcement. |
+| [`src/jarvis/response/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/response/__init__.py) | Response Manager | Owns formatting task results for Text UI and TTS audio rendering. |
+
+---
+
+### 7. Test Suite (`tests/`)
+
+| File | Why It Was Created | What It Is Used For |
+|---|---|---|
+| [`tests/test_tool_registry.py`](file:///D:/jarvis-desktop-agent/tests/test_tool_registry.py) | Verifies the Section 11 Tool Registry contract. | Tests: all 11 contract fields are present and valid; registration and lookup work; duplicate registration fails; MEDIUM risk without reversibility/rollback fails; irreversible tools without HIGH risk fail. |
+| [`tests/test_event_logger.py`](file:///D:/jarvis-desktop-agent/tests/test_event_logger.py) | Verifies Section 13 Event Logger requirements. | Tests: structured events are stored and queryable; sensitive credentials/keys/tokens are redacted; live streaming subscriber callbacks receive events in real time. |
+| [`tests/test_orchestrator_loop.py`](file:///D:/jarvis-desktop-agent/tests/test_orchestrator_loop.py) | Verifies Section 2 canonical 11-step execution loop. | Tests: all 11 steps execute in exact sequence and each step logs its name; task lifecycle transitions properly from CREATED to COMPLETED; cancellation at step 1 immediately halts the loop. |
+
+---
+
+## Verification & Execution Guide
+
+### 1. Run the Hello Loop
 ```bash
 uv run python main.py
 ```
+Output verifies:
+- Registered probe tool compliant with Section 11 contract.
+- 11/11 loop steps executed in sequence, each logging its name.
+- 16 total structured events captured and streamed to subscriber.
 
-Run test suite:
+### 2. Run the Test Suite
 ```bash
 uv run pytest -v
 ```
+Result: 10 passed, 0 failed.
