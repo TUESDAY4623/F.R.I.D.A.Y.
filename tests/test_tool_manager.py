@@ -155,7 +155,7 @@ def test_timeout():
     result = manager.dispatch("slow", {"message": "wait"})
 
     assert result.success is False
-    assert "time out" in result.error.lower()
+    assert "timed out" in result.error.lower()
 
 
 def test_raw_result_is_normalized():
