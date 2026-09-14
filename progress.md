@@ -2,13 +2,15 @@
 
 Tracks build progress date-wise per work session.
 Rules: Append-only, new entries added at the top (most recent first). Never edit or delete past entries.
+
 ## 2026-09-14 — Phase 1 (Adarsh)
 
-- what was built/changed: Implemented the Tool Manager execution gateway. It now validates tool requests and arguments, looks up registered tools, performs the Policy Engine check, handles DENY/CONFIRM decisions, executes tools with the contract timeout, catches execution failures, and normalizes tool results.
+- what was built/changed: Implemented the Tool Manager execution gateway and integrated it with the Policy Engine. The Tool Manager now validates tool requests and arguments, checks the registered tool and contract, performs policy checks, handles ALLOW/DENY/CONFIRM decisions, executes tools with contract-defined timeouts, catches execution failures, and normalizes tool results. The Policy Engine was updated from the Phase 0 pass-through to risk-based ALLOW/CONFIRM/DENY decisions based on tool risk level.
 
-- what was tested and the result: Added Tool Manager tests covering successful dispatch, unknown tools, argument validation, policy decisions, execution errors, timeout handling, and result normalization. GitHub Actions test result: **23 passed, 0 failed**.
+- what was tested and the result: Added Tool Manager tests covering successful dispatch, unknown tools, missing and invalid arguments, policy decisions, execution errors, timeout handling, and result normalization. Updated the Policy Engine test to validate decisions using the registered tool contract. GitHub Actions completed successfully with **23 passed, 0 failed**.
 
-- what's still open or blocking the next person: Real filesystem tools and full risk-based Policy Engine enforcement remain separate Phase 1 work. UI/log viewer and remaining Phase 0 integration work are also outside this Tool Manager task.
+- what's still open or blocking the next person: Real filesystem tools and remaining Phase 1 functionality are still open. UI/log viewer and remaining Phase 0 integration work are also still open.
+
 ## 2026-09-12 — Phase 0 (Adarsh)
 
 - what was built/changed: Added two temporary contract-proof tools, `read_file` and `list_directory`, implementing the shared `BaseTool` interface and declaring complete `ToolContract` metadata. Both tools are read-only and declared LOW risk. Verified that the tools can be registered and retrieved through `ToolRegistry`. Phase 0 Policy Engine remains an empty pass-through that returns `PolicyDecision.ALLOW`; real risk-tier enforcement is deferred to Phase 1.
