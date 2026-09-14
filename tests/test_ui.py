@@ -1,7 +1,15 @@
-from unittest.mock import Mock
+import sys
 
 import pytest
+
+if sys.platform != "win32":
+    pytest.skip(
+        "Jarvis UI tests require Windows",
+        allow_module_level=True,
+    )
+
 from PySide6.QtWidgets import QApplication
+from unittest.mock import Mock
 
 from jarvis.ui.main_window import MainWindow
 
