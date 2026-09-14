@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
-from typing import Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
-from jarvis.policy import PolicyEngine, get_policy_engine
 from jarvis.tools.contract import ToolResult
 from jarvis.tools.registry import ToolRegistry, get_tool_registry
 from jarvis.types import PolicyDecision
+
+if TYPE_CHECKING:
+    from jarvis.policy import PolicyEngine
 
 
 class ToolManager:
@@ -19,6 +21,8 @@ class ToolManager:
         registry: Optional[ToolRegistry] = None,
         policy_engine: Optional[PolicyEngine] = None,
     ) -> None:
+        from jarvis.policy import get_policy_engine
+
         self.registry = registry or get_tool_registry()
         self.policy_engine = policy_engine or get_policy_engine()
 
@@ -27,7 +31,7 @@ class ToolManager:
         tool_name: str,
         arguments: Dict[str, Any],
     ) -> ToolResult:
-        """Validate, authorize, execute, timeout, and normalize a tool call."""
+        """Validate, authorize, execute, and normalize a tool request."""
 
         # 1. Validate request
         if not isinstance(tool_name, str) or not tool_name.strip():
@@ -42,7 +46,7 @@ class ToolManager:
                 error="Tool arguments must be a dictionary",
             )
 
-        # 2. Find tool in registry
+        # 2. Find registered tool
         if not self.registry.has(tool_name):
             return ToolResult(
                 success=False,
@@ -52,7 +56,7 @@ class ToolManager:
         tool = self.registry.get(tool_name)
         contract = tool.contract
 
-        # 3. Basic input-schema validation
+        # 3. Validate arguments against the basic input schema
         validation_error = self._validate_arguments(
             arguments,
             contract.input_schema,
@@ -71,11 +75,10 @@ class ToolManager:
             contract=contract,
         )
 
-        # 5. Handle policy decision
         if decision == PolicyDecision.DENY:
             return ToolResult(
                 success=False,
-                error=f"Tool '{tool_name}' denied by policy",
+                error=f"Policy denied tool '{tool_name}'",
                 metadata={"policy_decision": decision.value},
             )
 
@@ -86,7 +89,7 @@ class ToolManager:
                 metadata={"policy_decision": decision.value},
             )
 
-        # 6. Execute with timeout
+        # 5. Execute with timeout
         executor = ThreadPoolExecutor(max_workers=1)
 
         try:
@@ -96,40 +99,46 @@ class ToolManager:
                 result = future.result(timeout=contract.timeout)
             except TimeoutError:
                 future.cancel()
+                executor.shutdown(wait=False, cancel_futures=True)
 
                 return ToolResult(
                     success=False,
                     error=(
-                        f"Tool '{tool_name}' timed out "
-                        f"after {contract.timeout} seconds"
+                        f"Tool '{tool_name}' timed out after "
+                        f"{contract.timeout} seconds"
                     ),
-                    metadata={
-                        "policy_decision": decision.value,
-                        "timeout": contract.timeout,
-                    },
-                )
-            except Exception as exc:
-                return ToolResult(
-                    success=False,
-                    error=f"Execution failed: {exc}",
-                    metadata={
-                        "policy_decision": decision.value,
-                    },
+                    metadata={"policy_decision": decision.value},
                 )
 
-        finally:
+        except Exception as exc:
             executor.shutdown(wait=False, cancel_futures=True)
 
-        # 7. Normalize result
+            return ToolResult(
+                success=False,
+                error=f"Execution failed: {exc}",
+                metadata={"policy_decision": decision.value},
+            )
+        else:
+            executor.shutdown(wait=True)
+
+        # 6. Normalize result
         if isinstance(result, ToolResult):
-            result.metadata["policy_decision"] = decision.value
-            return result
+            metadata = dict(result.metadata or {})
+            metadata["policy_decision"] = decision.value
+
+            return ToolResult(
+                success=result.success,
+                data=result.data,
+                error=result.error,
+                metadata=metadata,
+            )
 
         return ToolResult(
             success=True,
             data=result,
             metadata={
                 "policy_decision": decision.value,
+                "normalized": True,
             },
         )
 
@@ -138,15 +147,17 @@ class ToolManager:
         arguments: Dict[str, Any],
         schema: Dict[str, Any],
     ) -> Optional[str]:
-        """Perform basic validation against the declared JSON schema."""
+        """Perform basic validation of required fields and primitive types."""
+
+        if not isinstance(schema, dict):
+            return None
 
         required = schema.get("required", [])
+        properties = schema.get("properties", {})
 
         for field in required:
             if field not in arguments:
                 return f"Missing required argument: '{field}'"
-
-        properties = schema.get("properties", {})
 
         for field, value in arguments.items():
             if field not in properties:
