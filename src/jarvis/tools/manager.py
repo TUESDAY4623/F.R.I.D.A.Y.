@@ -1,40 +1,180 @@
-"""Tool Manager stub (Phase 0).
-
-Per Section 4 & 11:
-- Tool Manager owns: Validate request -> policy check -> execute -> enforce timeout -> normalize result.
-- Tool Manager does NOT own: Defining what a tool can do (that's Tool Registry).
-- Receives: Action request.
-- Returns: Normalized result or error.
-- Called by: Orchestrator.
-(To be fully implemented by Adarsh in Phase 1).
-"""
+"""Tool Manager for controlled tool execution."""
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from typing import Any, Dict, Optional
 
+from jarvis.policy import PolicyEngine, get_policy_engine
 from jarvis.tools.contract import ToolResult
 from jarvis.tools.registry import ToolRegistry, get_tool_registry
+from jarvis.types import PolicyDecision
 
 
 class ToolManager:
-    """Tool Manager stub for driving tool execution through the Tool Registry."""
+    """Controlled execution gateway for registered tools."""
 
-    def __init__(self, registry: Optional[ToolRegistry] = None) -> None:
+    def __init__(
+        self,
+        registry: Optional[ToolRegistry] = None,
+        policy_engine: Optional[PolicyEngine] = None,
+    ) -> None:
         self.registry = registry or get_tool_registry()
+        self.policy_engine = policy_engine or get_policy_engine()
 
-    def dispatch(self, tool_name: str, arguments: Dict[str, Any]) -> ToolResult:
-        """Dispatch action request to registered tool, returning normalized result."""
+    def dispatch(
+        self,
+        tool_name: str,
+        arguments: Dict[str, Any],
+    ) -> ToolResult:
+        """Validate, authorize, execute, timeout, and normalize a tool call."""
+
+        # 1. Validate request
+        if not isinstance(tool_name, str) or not tool_name.strip():
+            return ToolResult(
+                success=False,
+                error="Tool name must be a non-empty string",
+            )
+
+        if not isinstance(arguments, dict):
+            return ToolResult(
+                success=False,
+                error="Tool arguments must be a dictionary",
+            )
+
+        # 2. Find tool in registry
         if not self.registry.has(tool_name):
             return ToolResult(
                 success=False,
                 error=f"Tool '{tool_name}' not found in registry",
             )
+
         tool = self.registry.get(tool_name)
-        try:
-            return tool.execute(arguments)
-        except Exception as exc:
+        contract = tool.contract
+
+        # 3. Basic input-schema validation
+        validation_error = self._validate_arguments(
+            arguments,
+            contract.input_schema,
+        )
+
+        if validation_error:
             return ToolResult(
                 success=False,
-                error=f"Execution failed: {exc}",
+                error=validation_error,
             )
+
+        # 4. Policy check
+        decision = self.policy_engine.check(
+            action_name=tool_name,
+            arguments=arguments,
+            contract=contract,
+        )
+
+        # 5. Handle policy decision
+        if decision == PolicyDecision.DENY:
+            return ToolResult(
+                success=False,
+                error=f"Tool '{tool_name}' denied by policy",
+                metadata={"policy_decision": decision.value},
+            )
+
+        if decision == PolicyDecision.CONFIRM:
+            return ToolResult(
+                success=False,
+                error=f"Tool '{tool_name}' requires approval before execution",
+                metadata={"policy_decision": decision.value},
+            )
+
+        # 6. Execute with timeout
+        executor = ThreadPoolExecutor(max_workers=1)
+
+        try:
+            future = executor.submit(tool.execute, arguments)
+
+            try:
+                result = future.result(timeout=contract.timeout)
+            except TimeoutError:
+                future.cancel()
+
+                return ToolResult(
+                    success=False,
+                    error=(
+                        f"Tool '{tool_name}' timed out "
+                        f"after {contract.timeout} seconds"
+                    ),
+                    metadata={
+                        "policy_decision": decision.value,
+                        "timeout": contract.timeout,
+                    },
+                )
+            except Exception as exc:
+                return ToolResult(
+                    success=False,
+                    error=f"Execution failed: {exc}",
+                    metadata={
+                        "policy_decision": decision.value,
+                    },
+                )
+
+        finally:
+            executor.shutdown(wait=False, cancel_futures=True)
+
+        # 7. Normalize result
+        if isinstance(result, ToolResult):
+            result.metadata["policy_decision"] = decision.value
+            return result
+
+        return ToolResult(
+            success=True,
+            data=result,
+            metadata={
+                "policy_decision": decision.value,
+            },
+        )
+
+    @staticmethod
+    def _validate_arguments(
+        arguments: Dict[str, Any],
+        schema: Dict[str, Any],
+    ) -> Optional[str]:
+        """Perform basic validation against the declared JSON schema."""
+
+        required = schema.get("required", [])
+
+        for field in required:
+            if field not in arguments:
+                return f"Missing required argument: '{field}'"
+
+        properties = schema.get("properties", {})
+
+        for field, value in arguments.items():
+            if field not in properties:
+                continue
+
+            expected_type = properties[field].get("type")
+
+            if expected_type == "string" and not isinstance(value, str):
+                return f"Argument '{field}' must be a string"
+
+            if expected_type == "object" and not isinstance(value, dict):
+                return f"Argument '{field}' must be an object"
+
+            if expected_type == "array" and not isinstance(value, list):
+                return f"Argument '{field}' must be an array"
+
+            if expected_type == "boolean" and not isinstance(value, bool):
+                return f"Argument '{field}' must be a boolean"
+
+            if expected_type == "integer" and (
+                not isinstance(value, int) or isinstance(value, bool)
+            ):
+                return f"Argument '{field}' must be an integer"
+
+            if expected_type == "number" and (
+                not isinstance(value, (int, float))
+                or isinstance(value, bool)
+            ):
+                return f"Argument '{field}' must be a number"
+
+        return None
