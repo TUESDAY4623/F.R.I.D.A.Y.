@@ -3,6 +3,14 @@
 Tracks build progress date-wise per work session.
 Rules: Append-only, new entries added at the top (most recent first). Never edit or delete past entries.
 
+## 2026-09-14 — Phase 0 (Tanmay)
+
+- what was built/changed: Implemented the initial PySide6 desktop UI shell for Jarvis with typed text input, Send action, agent response display, and a live Event Logger pane. Integrated the UI with the existing `AgentOrchestrator.execute_task()` interface and `EventLogger.add_subscriber()` callback mechanism. Added basic UI tests and updated GitHub Actions to run backend tests on Ubuntu and UI tests on Windows.
+
+- what was tested and the result: Ran the complete automated test suite on Windows using Python 3.11.9. **26 tests passed, 0 failed**. UI tests covering window initialization, empty input handling, and orchestrator request submission passed successfully. The existing Phase 0 backend tests and Hello Loop functionality remained intact.
+
+- what's still open or blocking the next person: Phase 0 UI shell is complete. Advanced UI functionality such as approval dialogs, task/state visualization, browser previews, voice indicators, and other interactive controls remain deferred to their respective later phases.
+
 ## 2026-09-14 — Phase 1 (Adarsh)
 
 - what was built/changed: Implemented the Tool Manager execution gateway and integrated it with the Policy Engine. The Tool Manager now validates tool requests and arguments, checks the registered tool and contract, performs policy checks, handles ALLOW/DENY/CONFIRM decisions, executes tools with contract-defined timeouts, catches execution failures, and normalizes tool results. The Policy Engine was updated from the Phase 0 pass-through to risk-based ALLOW/CONFIRM/DENY decisions based on tool risk level.
