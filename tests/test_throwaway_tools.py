@@ -57,14 +57,15 @@ def test_throwaway_tools_register_and_lookup():
 
 
 
+
 def test_policy_engine_allows_action():
     policy = PolicyEngine()
+    tool = ReadFileTool()
 
     decision = policy.check(
         action_name="read_file",
         arguments={"path": "example.txt"},
+        contract=tool.contract,
     )
 
     assert decision == PolicyDecision.ALLOW
-
-
