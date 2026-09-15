@@ -78,3 +78,63 @@ def test_request_is_sent_to_orchestrator(app):
     orchestrator.execute_task.assert_called_once_with(
         "Hello Jarvis"
     )
+
+
+def test_task_state_badge_updates(app):
+    orchestrator = Mock()
+    logger = Mock()
+
+    window = MainWindow(
+        orchestrator=orchestrator,
+        logger=logger,
+    )
+
+    assert window.status_badge.text() == "IDLE"
+
+    window._update_task_state("EXECUTING")
+    assert window.status_badge.text() == "EXECUTING"
+
+    window._update_task_state("COMPLETED")
+    assert window.status_badge.text() == "COMPLETED"
+
+
+def test_tool_call_tree_events(app):
+    orchestrator = Mock()
+    logger = Mock()
+
+    window = MainWindow(
+        orchestrator=orchestrator,
+        logger=logger,
+    )
+
+    # Dispatch a tool start event
+    start_event = {
+        "type": "tool.started",
+        "step_name": "6. Dispatch action",
+        "message": "Dispatching read_file",
+        "payload": {
+            "tool_name": "read_file",
+            "arguments": {"path": "test.txt"},
+        },
+    }
+
+    window._handle_tool_event(start_event)
+
+    assert window.tool_call_tree.topLevelItemCount() == 1
+    item = window.tool_call_tree.topLevelItem(0)
+    assert "read_file" in item.text(0)
+    assert item.text(1) == "RUNNING"
+
+    # Dispatch tool completion
+    complete_event = {
+        "type": "tool.completed",
+        "step_name": "6. Dispatch action",
+        "message": "Tool execution completed",
+        "payload": {
+            "tool_name": "read_file",
+            "result": {"content": "sample text"},
+        },
+    }
+
+    window._handle_tool_event(complete_event)
+    assert item.text(1) == "SUCCESS"
