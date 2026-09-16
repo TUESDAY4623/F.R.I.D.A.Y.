@@ -21,17 +21,34 @@ def app():
     if application is None:
         application = QApplication([])
 
-    return application
+    yield application
+
+    for widget in application.topLevelWidgets():
+        widget.close()
+        widget.deleteLater()
+
+    application.processEvents()
 
 
-def test_main_window_initializes(app):
+@pytest.fixture
+def window(app):
     orchestrator = Mock()
     logger = Mock()
 
-    window = MainWindow(
+    main_window = MainWindow(
         orchestrator=orchestrator,
         logger=logger,
     )
+
+    yield main_window, orchestrator, logger
+
+    main_window.close()
+    main_window.deleteLater()
+    app.processEvents()
+
+
+def test_main_window_initializes(window):
+    window, _, _ = window
 
     assert window.input_box is not None
     assert window.send_button is not None
@@ -39,14 +56,8 @@ def test_main_window_initializes(app):
     assert window.log_box is not None
 
 
-def test_empty_request_is_ignored(app):
-    orchestrator = Mock()
-    logger = Mock()
-
-    window = MainWindow(
-        orchestrator=orchestrator,
-        logger=logger,
-    )
+def test_empty_request_is_ignored(window):
+    window, orchestrator, _ = window
 
     window.input_box.setPlainText("")
     window.submit_request()
@@ -54,8 +65,8 @@ def test_empty_request_is_ignored(app):
     orchestrator.execute_task.assert_not_called()
 
 
-def test_request_is_sent_to_orchestrator(app):
-    orchestrator = Mock()
+def test_request_is_sent_to_orchestrator(window):
+    window, orchestrator, _ = window
 
     orchestrator.execute_task.return_value = {
         "task_id": "task_test",
@@ -65,13 +76,6 @@ def test_request_is_sent_to_orchestrator(app):
         "steps_count": 0,
     }
 
-    logger = Mock()
-
-    window = MainWindow(
-        orchestrator=orchestrator,
-        logger=logger,
-    )
-
     window.input_box.setPlainText("Hello Jarvis")
     window.submit_request()
 
@@ -80,14 +84,8 @@ def test_request_is_sent_to_orchestrator(app):
     )
 
 
-def test_task_state_badge_updates(app):
-    orchestrator = Mock()
-    logger = Mock()
-
-    window = MainWindow(
-        orchestrator=orchestrator,
-        logger=logger,
-    )
+def test_task_state_badge_updates(window):
+    window, _, _ = window
 
     assert window.status_badge.text() == "IDLE"
 
@@ -98,14 +96,8 @@ def test_task_state_badge_updates(app):
     assert window.status_badge.text() == "COMPLETED"
 
 
-def test_tool_call_tree_events(app):
-    orchestrator = Mock()
-    logger = Mock()
-
-    window = MainWindow(
-        orchestrator=orchestrator,
-        logger=logger,
-    )
+def test_tool_call_tree_events(window):
+    window, _, _ = window
 
     # Dispatch a tool start event
     start_event = {
