@@ -12,6 +12,14 @@ Rules: Append-only, new entries added at the top (most recent first). Never edit
 **Phase 1: IN PROGRESS (Owner Scope: Sujeet — Core Brain)**
 
 ---
+## 2026-09-16 — Phase 1 (Tanmay)
+
+- what was built/changed: Extended the PySide6 UI with task ID/lifecycle tracking, structured event handling, and a collapsible tool execution timeline showing tool name, arguments, status, and results/errors.
+
+- what was tested and the result: Added UI tests for task states and tool events. Existing backend tests continued to pass.
+
+- what's still open or blocking the next person: Approval controls, recovery/retry, browser/vision previews, voice interaction, and further Phase 1 backend-tool integration remain open.
+
 ## 2026-09-16 — Phase 1 (Adarsh)
 
 
