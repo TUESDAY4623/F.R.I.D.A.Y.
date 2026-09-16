@@ -13,11 +13,9 @@ from unittest.mock import Mock
 
 from jarvis.ui.main_window import MainWindow
 
-
 @pytest.fixture
 def app():
     application = QApplication.instance()
-
     if application is None:
         application = QApplication([])
 
@@ -129,4 +127,4 @@ def test_tool_call_tree_events(window):
     }
 
     window._handle_tool_event(complete_event)
-    assert item.text(1) == "SUCCESS"
+    assert item.text(1) == "SUCCESS"
