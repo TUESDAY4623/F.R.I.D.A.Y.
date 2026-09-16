@@ -1,6 +1,6 @@
 # Python-generated files
 __pycache__/
-*.py[oc]
+*.py[cod]
 build/
 dist/
 wheels/
@@ -8,3 +8,25 @@ wheels/
 
 # Virtual environments
 .venv
+venv/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Test / coverage caches
+.pytest_cache/
+htmlcov/
+.coverage
+
+# IDE directories
+.vscode/
+.idea/
+
+# Log files
+*.log
+
+# OS artifacts
+.DS_Store
+Thumbs.db

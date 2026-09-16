@@ -13,7 +13,7 @@ Phase 0 establishes the foundation of the Jarvis Desktop Agent as a **modular mo
 3. **Orchestrator 11-Step Canonical Loop (Section 2)**: Defined as an explicit state machine (`CanonicalLoopStateMachine`) and task coordinator (`AgentOrchestrator`). Every step functions as an explicit state machine handler that logs its own name through the Event Logger and delegates to the owning component.
 4. **Event Logger (Section 13)**: Fully wired as the first real component. Features sensitive credential redaction (`[REDACTED]`), in-memory ring buffering with querying, disk persistence, and real-time live streaming subscribers for UI log panes.
 5. **Component Stubs (Section 4)**: All subsystems defined per the Section 4 responsibility table as typed interfaces and pass-through stubs so team members (Adarsh, Tanmay, Sujeet) have stable contracts to build against in Phase 1+.
-6. **Deterministic Verification**: 100% test pass rate across 10 automated test cases via `pytest`, and clean end-to-end execution of the Phase 0 "Hello Loop" via `main.py`.
+6. **Deterministic Verification**: 100% test pass rate across 29 automated test cases via `pytest`, and clean end-to-end execution of the Phase 0 "Hello Loop" via `main.py`.
 
 ---
 
@@ -142,8 +142,8 @@ Phase 0 establishes the foundation of the Jarvis Desktop Agent as a **modular mo
 - **Usage**: Validates that tool instances conform to `ToolContract` upon `register()`, enforces name uniqueness, and provides safe tool lookup via `get(name)` and `list_tools()`.
 
 #### `src/jarvis/tools/manager.py`
-- **Why Created**: Tool Manager stub for Phase 0 (to be fully built by Adarsh in Phase 1).
-- **Usage**: Provides `dispatch(tool_name, arguments)` to invoke tools registered with `ToolRegistry` and normalize exceptions into `ToolResult`.
+- **Why Created**: Tool Manager for controlled tool execution (originally a Phase 0 stub, now contains early Phase 1 implementation by Adarsh).
+- **Usage**: Provides `dispatch(tool_name, arguments)` to invoke tools registered with `ToolRegistry`. Validates tool requests and arguments against `input_schema`, checks policy decisions via `PolicyEngine`, executes tools with contract-defined timeouts via `ThreadPoolExecutor`, and normalizes exceptions into `ToolResult`. Some Phase 1-oriented functionality (argument validation, timeout enforcement) is already implemented. This is treated as scope implemented early, not as evidence that Phase 1 is complete.
 
 ---
 
@@ -198,7 +198,7 @@ To preserve strict module boundaries and prevent developers from absorbing other
    - *Usage*: Returns `VerificationResult` (`PASS`/`FAIL` + reason).
 4. **[`src/jarvis/policy/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/policy/__init__.py) (Policy Engine)**:
    - *Owns*: Evaluating risk tiers.
-   - *Usage*: Returns `PolicyDecision.ALLOW` (pass-through for Phase 0).
+   - *Usage*: Returns `PolicyDecision.ALLOW`, `CONFIRM`, or `DENY` based on tool risk level. The Policy Engine satisfies the Phase 0 interface and ownership requirements and already contains risk-based implementation that was introduced ahead of the formal Phase 1 scope. This does not constitute Phase 1 completion.
 5. **[`src/jarvis/approval/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/approval/__init__.py) (Approval Manager)**:
    - *Owns*: Human-in-the-loop interaction (presenting what/target/consequences/reversibility/why).
    - *Usage*: Auto-approves in Phase 0; will display modal in Phase 2.
@@ -266,6 +266,28 @@ To preserve strict module boundaries and prevent developers from absorbing other
   - Verifies full task lifecycle transitions (`CREATED` → `EXECUTING` → `COMPLETED`).
   - Verifies that cancellation flags in State Manager immediately stop execution at Step 1.
 
+#### `tests/test_throwaway_tools.py`
+- **Why Created**: Validates throwaway contract-proof tools (`ReadFileTool`, `ListDirectoryTool`) against the Tool Registry.
+- **Coverage**:
+  - Verifies tool contracts and execution against real filesystem operations.
+  - Verifies registry registration and lookup for multiple tools.
+  - Verifies Policy Engine allows LOW risk tool actions.
+
+#### `tests/test_tool_manager.py`
+- **Why Created**: Validates Tool Manager execution gateway (early Phase 1 implementation).
+- **Coverage**:
+  - Verifies successful dispatch, unknown tools, missing/invalid arguments, policy decisions (DENY, CONFIRM), execution exceptions, timeout handling, and result normalization.
+
+#### `tests/test_phase1_benchmark.py`
+- **Why Created**: Deterministic loop benchmark for regression testing.
+- **Coverage**:
+  - Verifies 100% task success rate across multiple orchestrator iterations with sub-500ms average latency.
+
+#### `tests/test_ui.py`
+- **Why Created**: Validates PySide6 UI shell (Windows-only).
+- **Coverage**:
+  - Verifies window initialization, empty input handling, orchestrator request submission, task state badge updates, and tool call tree event handling.
+
 ---
 
 ## 4. How to Verify & Run
@@ -284,4 +306,119 @@ uv run python main.py
 uv run pytest -v
 ```
 **Expected Output**:
-- 10 passed, 0 failed across all test modules.
+- 29 passed, 0 failed across all test modules.
+
+---
+
+## 5. Phase 0 Sign-Off
+
+**Status**: COMPLETED
+**Sign-off**: PASS WITH NON-BLOCKING ISSUES
+
+Phase 0's official exit criterion — *"All three developers can run a shared Hello Loop through the complete 11-step canonical execution sequence, with stub implementations for every component"* — is verified and satisfied.
+
+### Early Phase 1 Scope Overlap
+
+The following components already contain implementation beyond the original Phase 0 stub requirement. This functionality is retained because it is compatible with the architecture and does not block Phase 0 completion:
+
+- **Policy Engine**: Already contains risk-based `ALLOW`/`CONFIRM`/`DENY` decisions based on tool risk level, beyond the original Phase 0 pass-through stub. This does not constitute Phase 1 completion.
+- **Tool Manager**: Already contains argument validation against `input_schema`, policy check integration, and timeout enforcement via `ThreadPoolExecutor`. These features are retained and tested; their presence does not constitute Phase 1 completion.
+
+---
+
+## 6. Phase 1 Transition & Scope: Core Brain (Sujeet)
+
+**Phase 0**: COMPLETED<br>
+**Phase 1**: IN PROGRESS<br>
+**Phase 1 Owner Scope**: Sujeet — Core Brain<br>
+**Start Date**: 2026-09-16<br>
+
+### 6.1 Purpose of Phase 1
+> **Core loop, text only.**
+
+Phase 1 elevates the Jarvis Desktop Agent from the verified Phase 0 skeleton into a functional, text-driven execution core. It wires the user's text requests through structured intent analysis, dynamic task-graph planning, and state-machine orchestration across the canonical 11-step execution loop.
+
+### 6.2 Phase 1 Exit Criterion
+> **The 11-step loop runs reliably end-to-end on 3–4 real file tools using text input only.**
+
+**Current Phase 1 Status**: NOT YET COMPLETE (IN PROGRESS)<br>
+- **Phase 0**: Completed, cleaned up, verified (29 passed, 0 failed), and signed off.
+- **Phase 1**: Now in progress under Sujeet's core brain implementation. Full Phase 1 sign-off requires end-to-end verification across the team's real file tools.
+
+### 6.3 Completed by Sujeet (Core Brain Implementation)
+
+1. **Intent / Context Manager (`src/jarvis/intent/`)**:
+   - Accepts raw user text commands.
+   - Extracts structured `IntentResult` with action types (`file_read`, `file_write`, `file_list`, `file_move`, `file_pipeline`, `general`) and parsed path/content entities.
+   - Integrates read-only access to `MemoryManager` for conversation turns and persistent user preferences.
+   - Strictly does NOT execute tools or mutate Memory.
+
+2. **Task Graph Planner (`src/jarvis/planner/`)**:
+   - Consumes `IntentResult` and context to produce a structured, typed `TaskGraph`.
+   - Generates discrete `PlanStep` sequences with tool names, arguments, and expected outcomes per step.
+   - Supports deterministic file reading, writing, listing, moving, and multi-step pipeline plans.
+   - Provides backward-compatible fallback (`noop_tool`) preserving Phase 0 Hello Loop execution.
+   - Strictly does NOT execute tools, bypass Policy, or mutate application state directly.
+
+3. **State Manager (`src/jarvis/state/`)**:
+   - Maintains single-task runtime truth in memory: `task_id`, `lifecycle`, `plan_version`, `current_step_index`, `current_step_name`, `is_cancelled`, `last_verified_state`, `step_results`, `active_plan`.
+   - Tracks plan versions and active `TaskGraph` configurations.
+   - Records discrete step results (`record_step_result`) and verified state outcomes from the Verification Engine.
+   - Supports cancellation flags and deadline evaluation.
+
+4. **Agent Orchestrator (`src/jarvis/orchestrator/`)**:
+   - Connects the high-level brain pipeline:
+     ```
+     User Input -> Intent/Context Manager -> Planner -> Task Graph -> State Manager -> 11-Step Canonical Loop -> State Manager -> Agent Result
+     ```
+   - Integrates `TaskMetricsCollector` tracking total tasks, success rate, first-attempt pass rate, and execution latency.
+   - Integrates `ResponseManager` to format final human-readable responses.
+   - Preserves strict ownership boundaries: delegates observation to `ObservationManager`, verification to `VerificationEngine`, policy evaluation to `PolicyEngine`, and tool dispatch to `ToolManager`.
+
+5. **Canonical Loop State Machine (`src/jarvis/orchestrator/loop.py`)**:
+   - Step 3 dynamically retrieves the next pending step from the Planner's `TaskGraph`.
+   - Step 4 looks up registered tool contracts in `ToolRegistry` for accurate `PolicyEngine` evaluation.
+   - Step 8 passes step-specific expected outcomes to the `VerificationEngine`.
+   - Step 9 records step results into `StateManager` and marks steps completed in the active `TaskGraph`.
+   - Step 10 logs status events via `EventLogger`.
+   - Maintains 100% adherence to the canonical 11-step execution sequence.
+
+### 6.4 Current Brain Architecture
+
+```
+                 [ User Text Input ]
+                          │
+                          ▼
+            [ Intent / Context Manager ]  ◄── (Read-only Memory / Preferences)
+                          │
+                          ▼  (IntentResult: action_type, entities, context)
+                     [ Planner ]
+                          │
+                          ▼  (TaskGraph: List[PlanStep] with expected outcomes)
+                [ Agent Orchestrator ]
+                          │
+                          ▼  (Drives 11-step sequence per action)
+         ┌─────────────────────────────────────────────────┐
+         │       Canonical 11-Step Execution Loop          │
+         │  1. Check cancellation / deadline (State)       │
+         │  2. Observe current state (Observation)         │
+         │  3. Decide next action (Planner TaskGraph)      │
+         │  4. Policy check (Policy Engine)                │
+         │  5. Approval if required (Approval Manager)     │
+         │  6. Dispatch action (Tool Manager -> Tool)      │
+         │  7. Observe resulting state (Observation)       │
+         │  8. Verify expected outcome (Verification)      │
+         │  9. Update State (State Manager)                │
+         │  10. Log event (Event Logger)                   │
+         │  11. Evaluate transition (Orchestrator)         │
+         └─────────────────────────────────────────────────┘
+                          │
+                          ▼
+                  [ State Manager ] ──► [ Agent Result / Response ]
+```
+
+### 6.5 Dependencies for Full Phase 1 Exit
+Full completion and sign-off of Phase 1 depends on:
+1. **Adarsh's Scope**: Integration with 3–4 real file tools (`read_file`, `write_file`, `list_directory`, `move_file`) registered in `ToolRegistry`.
+2. **Tanmay's Scope**: Text UI enhancements, live streaming log pane integration, and status badge coordination.
+3. **End-to-End Verification**: Validating the 11-step loop running reliably end-to-end on real file operations with text input only.

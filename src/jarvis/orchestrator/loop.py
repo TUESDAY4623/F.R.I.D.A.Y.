@@ -160,11 +160,26 @@ class CanonicalLoopStateMachine:
         if not ctx.task_graph:
             ctx.task_graph = self.planner.plan(intent=ctx.intent, task_id=ctx.task_id)
 
-        ctx.action = {
-            "tool_name": "noop_tool",
-            "arguments": {"intent": ctx.intent},
-            "step_id": "step-1",
-        }
+        next_step = (
+            ctx.task_graph.get_next_pending_step()
+            if hasattr(ctx.task_graph, "get_next_pending_step")
+            else None
+        )
+        if next_step:
+            ctx.action = {
+                "tool_name": next_step.tool_name,
+                "arguments": next_step.arguments,
+                "step_id": next_step.step_id,
+                "expected_outcome": next_step.expected_outcome,
+                "description": next_step.description,
+            }
+        else:
+            ctx.action = {
+                "tool_name": "noop_tool",
+                "arguments": {"intent": ctx.intent},
+                "step_id": "step-1",
+                "expected_outcome": {"status": "completed"},
+            }
 
     # --- Step 4: Policy check ---
     def _step_4_policy_check(self, ctx: LoopContext) -> None:
@@ -172,10 +187,19 @@ class CanonicalLoopStateMachine:
         self.logger.log_step(step_name=step_name, task_id=ctx.task_id)
         ctx.executed_steps.append(step_name)
 
+        action_name = ctx.action.get("tool_name", "") if ctx.action else ""
+        arguments = ctx.action.get("arguments", {}) if ctx.action else {}
+
+        # Look up tool contract from registry if tool is registered
+        contract = None
+        if hasattr(self.tool_manager, "registry") and self.tool_manager.registry.has(action_name):
+            contract = self.tool_manager.registry.get(action_name).contract
+
         # Delegate check to Policy Engine
         ctx.policy_decision = self.policy_engine.check(
-            action_name=ctx.action.get("tool_name", "") if ctx.action else "",
-            arguments=ctx.action.get("arguments", {}) if ctx.action else {},
+            action_name=action_name,
+            arguments=arguments,
+            contract=contract,
         )
 
     # --- Step 5: Approval if required ---
@@ -226,7 +250,11 @@ class CanonicalLoopStateMachine:
         ctx.executed_steps.append(step_name)
 
         # Delegate verification to Verification Engine
-        expected = {"status": "completed"}
+        expected = (
+            ctx.action.get("expected_outcome", {"status": "completed"})
+            if ctx.action
+            else {"status": "completed"}
+        )
         obs = ctx.observation_after or Observation()
         ctx.verification_result = self.verification_engine.verify(expected, obs)
 
@@ -237,16 +265,32 @@ class CanonicalLoopStateMachine:
         ctx.executed_steps.append(step_name)
 
         # Delegate state updates to State Manager
+        step_id = ctx.action.get("step_id", "step-1") if ctx.action else "step-1"
         self.state_manager.update_step(
             task_id=ctx.task_id,
             step_index=1,
-            step_name="step-1",
+            step_name=step_id,
         )
+        if ctx.tool_result and hasattr(self.state_manager, "record_step_result"):
+            self.state_manager.record_step_result(
+                task_id=ctx.task_id,
+                step_id=step_id,
+                result={
+                    "success": ctx.tool_result.success,
+                    "data": ctx.tool_result.data,
+                    "error": ctx.tool_result.error,
+                },
+            )
         if ctx.verification_result and ctx.verification_result.status == VerificationStatus.PASS:
             self.state_manager.set_last_verified_state(
                 task_id=ctx.task_id,
-                verified_state={"step_1": "verified"},
+                verified_state={
+                    step_id: "verified",
+                    "data": ctx.tool_result.data if ctx.tool_result else None,
+                },
             )
+        if ctx.task_graph and hasattr(ctx.task_graph, "mark_step_completed"):
+            ctx.task_graph.mark_step_completed(step_id)
 
     # --- Step 10: Log event ---
     def _step_10_log_event(self, ctx: LoopContext) -> None:

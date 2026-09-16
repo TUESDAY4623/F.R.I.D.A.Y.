@@ -17,3 +17,13 @@ class ResponseManager:
 
     def format_response(self, result: Dict[str, Any]) -> str:
         return f"Jarvis: Task finished with result: {result}"
+
+
+_default_response_manager = None
+
+
+def get_response_manager() -> ResponseManager:
+    global _default_response_manager
+    if _default_response_manager is None:
+        _default_response_manager = ResponseManager()
+    return _default_response_manager

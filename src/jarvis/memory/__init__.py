@@ -30,3 +30,13 @@ class MemoryManager:
 
     def add_message(self, role: str, content: str) -> None:
         self._conversation.append({"role": role, "content": content})
+
+
+_default_memory_manager = None
+
+
+def get_memory_manager() -> MemoryManager:
+    global _default_memory_manager
+    if _default_memory_manager is None:
+        _default_memory_manager = MemoryManager()
+    return _default_memory_manager

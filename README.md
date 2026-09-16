@@ -9,7 +9,7 @@ Phase 0 sets up the core foundation for the Jarvis Desktop Agent as a **modular 
 3. **Orchestrator 11-Step Canonical Loop**: Built as an explicit finite state machine (`CanonicalLoopStateMachine`) and task coordinator (`AgentOrchestrator`) per Section 2. Every single step functions as a no-op stub that logs its own name via the Event Logger.
 4. **Event Logger as First Real Component**: Complete, thread-safe implementation per Section 13 with sensitive data redaction (`[REDACTED]`), in-memory query buffer, file sink capability, and live streaming subscriber callbacks for Tanmay's UI log pane.
 5. **Component Stubs**: Subsystems defined per Section 4 responsibility table as typed interfaces and pass-through stubs so team members (Adarsh, Tanmay, Sujeet) have fixed contracts to build against in Phase 1+.
-6. **Deterministic Verification**: 100% test pass rate across 10 automated test cases, and clean end-to-end execution of the Phase 0 "Hello Loop".
+6. **Deterministic Verification**: 100% test pass rate across 29 automated test cases, and clean end-to-end execution of the Phase 0 "Hello Loop".
 
 ---
 
@@ -53,8 +53,8 @@ Phase 0 sets up the core foundation for the Jarvis Desktop Agent as a **modular 
 | [`src/jarvis/tools/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/tools/__init__.py) | Package export interface for the tool subsystem. | Exports `ToolContract`, `BaseTool`, `ToolResult`, `ToolRegistry`, `get_tool_registry`, and `ToolManager`. |
 | [`src/jarvis/tools/contract.py`](file:///D:/jarvis-desktop-agent/src/jarvis/tools/contract.py) | Shared tool specification contract per Section 11. | Declares `ToolContract` with all 11 required fields (`name`, `description`, `input_schema`, `output_schema`, `risk_level`, `reversible`, `rollback_strategy`, `timeout`, `idempotency`, `required_capabilities`, `platform_support`). Validates safety rules: `reversible: False` must be HIGH risk; `MEDIUM` risk must have `reversible: True` + rollback strategy. Also defines abstract `BaseTool` and `ToolResult`. |
 | [`src/jarvis/tools/registry.py`](file:///D:/jarvis-desktop-agent/src/jarvis/tools/registry.py) | Central repository of available tools. | Validates and stores tools (`register`), checks availability (`has`), retrieves tools (`get`), and lists contracts (`list_tools`). Enforces unique tool names. |
-| [`src/jarvis/tools/manager.py`](file:///D:/jarvis-desktop-agent/src/jarvis/tools/manager.py) | Tool Manager stub for Phase 0 (to be completed in Phase 1 by Adarsh). | Dispatches actions to registered tools and normalizes return values into `ToolResult`. |
-
+| [`src/jarvis/tools/manager.py`](file:///D:/jarvis-desktop-agent/src/jarvis/tools/manager.py) | Tool Manager execution gateway. | Dispatches actions to registered tools, validates arguments, checks policy, enforces timeouts, and normalizes return values into `ToolResult`. Early Phase 1-oriented features are implemented ahead of formal Phase 1 scope. |
+|
 ---
 
 ### 5. Orchestrator Subsystem (`src/jarvis/orchestrator/`)
@@ -76,7 +76,7 @@ These stubs establish clean boundaries and typed contracts so future phases can 
 | [`src/jarvis/state/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/state/__init__.py) | State Manager | Owns runtime task truth (`task_id`, `lifecycle`, `plan_version`, `current_step`, `deadline`, `last_verified_state`). Manages in-memory task states. |
 | [`src/jarvis/observation/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/observation/__init__.py) | Observation Manager | Owns selecting and normalizing observation sources per surface. Returns standardized `Observation` objects. |
 | [`src/jarvis/verification/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/verification/__init__.py) | Verification Engine | Owns comparing observed state to expected outcome. Returns `VerificationResult` (`PASS`/`FAIL` + reason). |
-| [`src/jarvis/policy/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/policy/__init__.py) | Policy Engine | Owns evaluating risk tier. In Phase 0, functions as a pass-through returning `PolicyDecision.ALLOW`. |
+| [`src/jarvis/policy/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/policy/__init__.py) | Policy Engine | Owns evaluating risk tier. Returns `ALLOW`, `CONFIRM`, or `DENY` based on tool risk level. Satisfies Phase 0 contract and contains early risk-based logic ahead of formal Phase 1 scope. |
 | [`src/jarvis/approval/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/approval/__init__.py) | Approval Manager | Owns human-in-the-loop interaction (presenting what/target/consequences/reversibility/why). In Phase 0, auto-approves. |
 | [`src/jarvis/planner/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/planner/__init__.py) | Planner | Owns task graph generation with expected outcomes per step. Returns `TaskGraph`. |
 | [`src/jarvis/recovery/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/recovery/__init__.py) | Error / Recovery Manager | Owns failure taxonomy, retry/replan budgets, backoff, and recovery actions. |
@@ -118,4 +118,4 @@ Output verifies:
 ```bash
 uv run pytest -v
 ```
-Result: 10 passed, 0 failed.
+Result: 29 passed, 0 failed.
