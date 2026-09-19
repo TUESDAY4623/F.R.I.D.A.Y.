@@ -1,12 +1,9 @@
+import os
 import sys
 
 import pytest
 
-if sys.platform != "win32":
-    pytest.skip(
-        "Jarvis UI tests require Windows",
-        allow_module_level=True,
-    )
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtWidgets import QApplication
 from unittest.mock import Mock
