@@ -35,7 +35,15 @@ from jarvis.recovery import RecoveryManager, get_recovery_manager
 from jarvis.state import StateManager, get_state_manager
 from jarvis.tools import ToolManager
 from jarvis.tools.contract import ToolResult
-from jarvis.types import ApprovalDecision, PolicyDecision, TaskLifecycle, VerificationStatus
+from jarvis.types import (
+    ApprovalDecision,
+    ApprovalStatus,
+    FailureClassification,
+    PolicyDecision,
+    RecoveryStrategy,
+    TaskLifecycle,
+    VerificationStatus,
+)
 from jarvis.verification import VerificationEngine, VerificationResult, get_verification_engine
 
 
@@ -60,6 +68,9 @@ class LoopStatus(str, Enum):
     RUNNING = "running"
     STEP_COMPLETED = "step_completed"
     LOOP_COMPLETED = "loop_completed"
+    RETRYING = "retrying"
+    RECOVERING = "recovering"
+    REPLANNING = "replanning"
     CANCELLED = "cancelled"
     FAILED = "failed"
 
@@ -133,9 +144,21 @@ class CanonicalLoopStateMachine:
         # Delegate check to State Manager
         if self.state_manager.is_cancelled(ctx.task_id):
             ctx.status = LoopStatus.CANCELLED
+            self.logger.log_event(
+                event_type=EventType.TASK_CANCELLED,
+                source="orchestrator",
+                message=f"Task {ctx.task_id} cancelled at Step 1",
+                task_id=ctx.task_id,
+            )
             return
         if self.state_manager.is_deadline_exceeded(ctx.task_id):
             ctx.status = LoopStatus.FAILED
+            self.logger.log_event(
+                event_type=EventType.TASK_TIMEOUT,
+                source="orchestrator",
+                message=f"Task {ctx.task_id} timed out / deadline exceeded at Step 1",
+                task_id=ctx.task_id,
+            )
             return
 
     # --- Step 2: Observe current state ---
@@ -212,16 +235,55 @@ class CanonicalLoopStateMachine:
         if ctx.policy_decision == PolicyDecision.CONFIRM:
             from jarvis.approval import ApprovalRequest
 
+            tool_name = ctx.action.get("tool_name", "") if ctx.action else ""
             request = ApprovalRequest(
-                action=ctx.action.get("tool_name", "") if ctx.action else "",
+                action=tool_name,
                 target="desktop",
                 consequences="Action requires confirmation",
                 reversible=False,
                 reason="Policy CONFIRM trigger",
             )
+            self.state_manager.set_approval_status(ctx.task_id, ApprovalStatus.PENDING)
+            self.logger.log_event(
+                event_type=EventType.TASK_APPROVAL_PENDING,
+                source="orchestrator",
+                message=f"Approval pending for action '{tool_name}'",
+                task_id=ctx.task_id,
+                payload={"action": tool_name},
+            )
             ctx.approval_decision = self.approval_manager.request_approval(request)
+
+            if ctx.approval_decision == ApprovalDecision.APPROVE:
+                self.state_manager.set_approval_status(ctx.task_id, ApprovalStatus.APPROVED)
+                self.logger.log_event(
+                    event_type=EventType.TASK_APPROVAL_APPROVED,
+                    source="orchestrator",
+                    message=f"Action '{tool_name}' approved by user",
+                    task_id=ctx.task_id,
+                    payload={"action": tool_name},
+                )
+            elif ctx.approval_decision == ApprovalDecision.DENY:
+                self.state_manager.set_approval_status(ctx.task_id, ApprovalStatus.DENIED)
+                self.logger.log_event(
+                    event_type=EventType.TASK_APPROVAL_DENIED,
+                    source="orchestrator",
+                    message=f"Action '{tool_name}' denied by user",
+                    task_id=ctx.task_id,
+                    payload={"action": tool_name},
+                )
+            elif ctx.approval_decision == ApprovalDecision.CANCEL:
+                self.state_manager.set_approval_status(ctx.task_id, ApprovalStatus.CANCELLED)
+                self.state_manager.cancel_task(ctx.task_id)
+                self.logger.log_event(
+                    event_type=EventType.TASK_CANCELLED,
+                    source="orchestrator",
+                    message=f"Task {ctx.task_id} cancelled during approval for '{tool_name}'",
+                    task_id=ctx.task_id,
+                    payload={"action": tool_name},
+                )
         else:
             ctx.approval_decision = ApprovalDecision.APPROVE
+            self.state_manager.set_approval_status(ctx.task_id, ApprovalStatus.NOT_REQUIRED)
 
     # --- Step 6: Dispatch action ---
     def _step_6_dispatch_action(self, ctx: LoopContext) -> None:
@@ -229,10 +291,43 @@ class CanonicalLoopStateMachine:
         self.logger.log_step(step_name=step_name, task_id=ctx.task_id)
         ctx.executed_steps.append(step_name)
 
-        # Delegate execution to Tool Manager
         tool_name = ctx.action.get("tool_name", "noop_tool") if ctx.action else "noop_tool"
         arguments = ctx.action.get("arguments", {}) if ctx.action else {}
-        ctx.tool_result = self.tool_manager.dispatch(tool_name=tool_name, arguments=arguments)
+
+        # Log tool started event for observability (Section 9)
+        self.logger.log_event(
+            event_type=EventType.TOOL_STARTED,
+            source="orchestrator",
+            message=f"Dispatching tool '{tool_name}'",
+            task_id=ctx.task_id,
+            payload={"tool_name": tool_name, "arguments": arguments},
+        )
+
+        # Delegate execution to Tool Manager with approval decision
+        ctx.tool_result = self.tool_manager.dispatch(
+            tool_name=tool_name,
+            arguments=arguments,
+            approval_decision=ctx.approval_decision,
+        )
+
+        # Log tool completed / failed event for observability
+        if ctx.tool_result and ctx.tool_result.success:
+            self.logger.log_event(
+                event_type=EventType.TOOL_COMPLETED,
+                source="orchestrator",
+                message=f"Tool '{tool_name}' completed successfully",
+                task_id=ctx.task_id,
+                payload={"tool_name": tool_name, "result": ctx.tool_result.data},
+            )
+        else:
+            err = ctx.tool_result.error if ctx.tool_result else "Execution failed"
+            self.logger.log_event(
+                event_type=EventType.TOOL_FAILED,
+                source="orchestrator",
+                message=f"Tool '{tool_name}' failed: {err}",
+                task_id=ctx.task_id,
+                payload={"tool_name": tool_name, "error": err},
+            )
 
     # --- Step 7: Observe resulting state ---
     def _step_7_observe_resulting_state(self, ctx: LoopContext) -> None:
@@ -242,6 +337,10 @@ class CanonicalLoopStateMachine:
 
         # Delegate observation to Observation Manager
         ctx.observation_after = self.observation_manager.observe(target="post_action_state")
+        if ctx.tool_result and ctx.observation_after:
+            ctx.observation_after.state["tool_success"] = ctx.tool_result.success
+            ctx.observation_after.state["tool_data"] = ctx.tool_result.data
+            ctx.observation_after.state["tool_error"] = ctx.tool_result.error
 
     # --- Step 8: Verify expected outcome ---
     def _step_8_verify_expected_outcome(self, ctx: LoopContext) -> None:
@@ -289,8 +388,11 @@ class CanonicalLoopStateMachine:
                     "data": ctx.tool_result.data if ctx.tool_result else None,
                 },
             )
-        if ctx.task_graph and hasattr(ctx.task_graph, "mark_step_completed"):
-            ctx.task_graph.mark_step_completed(step_id)
+            if ctx.task_graph and hasattr(ctx.task_graph, "mark_step_completed"):
+                ctx.task_graph.mark_step_completed(step_id)
+        else:
+            if ctx.task_graph and hasattr(ctx.task_graph, "mark_step_failed"):
+                ctx.task_graph.mark_step_failed(step_id)
 
     # --- Step 10: Log event ---
     def _step_10_log_event(self, ctx: LoopContext) -> None:
@@ -299,12 +401,16 @@ class CanonicalLoopStateMachine:
         ctx.executed_steps.append(step_name)
 
         # Delegate to Event Logger (first real component)
+        is_verified = bool(
+            ctx.verification_result
+            and ctx.verification_result.status == VerificationStatus.PASS
+        )
         self.logger.log_event(
             event_type=EventType.TASK_STATUS_CHANGED,
             source="orchestrator",
             message=f"Task {ctx.task_id} completed loop iteration",
             task_id=ctx.task_id,
-            payload={"verified": True},
+            payload={"verified": is_verified},
         )
 
     # --- Step 11: Continue -> retry -> recover -> replan -> complete ---
@@ -313,8 +419,138 @@ class CanonicalLoopStateMachine:
         self.logger.log_step(step_name=step_name, task_id=ctx.task_id)
         ctx.executed_steps.append(step_name)
 
-        # Determine transition: for Phase 0 stub, we complete successfully
-        ctx.status = LoopStatus.LOOP_COMPLETED
+        # Check if task was cancelled during approval or execution
+        if self.state_manager.is_cancelled(ctx.task_id) or (
+            ctx.approval_decision == ApprovalDecision.CANCEL
+        ):
+            ctx.status = LoopStatus.CANCELLED
+            return
+
+        step_success = bool(
+            ctx.tool_result
+            and ctx.tool_result.success
+            and (not ctx.verification_result or ctx.verification_result.status == VerificationStatus.PASS)
+        )
+
+        step_id = ctx.action.get("step_id", "step-1") if ctx.action else "step-1"
+        action_name = ctx.action.get("tool_name", "") if ctx.action else ""
+        arguments = ctx.action.get("arguments", {}) if ctx.action else {}
+
+        if step_success:
+            # Check if there are more pending steps in the task graph
+            has_pending = False
+            if ctx.task_graph and hasattr(ctx.task_graph, "get_next_pending_step"):
+                has_pending = ctx.task_graph.get_next_pending_step() is not None
+
+            if has_pending:
+                ctx.status = LoopStatus.STEP_COMPLETED
+            else:
+                ctx.status = LoopStatus.LOOP_COMPLETED
+            return
+
+        # Failure handling (tool error, verification failure, policy/approval denial)
+        task_state = self.state_manager.get_state(ctx.task_id)
+        retry_count = task_state.retry_count if task_state else 0
+        replan_count = task_state.replan_count if task_state else 0
+        recovery_attempts = task_state.recovery_attempts if task_state else 0
+
+        err_msg = ""
+        if ctx.tool_result and not ctx.tool_result.success:
+            err_msg = ctx.tool_result.error or "Tool dispatch failed"
+        elif ctx.verification_result and ctx.verification_result.status == VerificationStatus.FAIL:
+            err_msg = ctx.verification_result.reason or "Verification failed"
+        else:
+            err_msg = "Unknown step execution failure"
+
+        rec_context = {
+            "retry_count": retry_count,
+            "replan_count": replan_count,
+            "recovery_attempts": recovery_attempts,
+            "verification_failure": bool(
+                ctx.verification_result and ctx.verification_result.status == VerificationStatus.FAIL
+            ),
+            "step_id": step_id,
+        }
+
+        recovery_action = self.recovery_manager.handle_failure(
+            failure_type=err_msg,
+            task_id=ctx.task_id,
+            action_name=action_name,
+            arguments=arguments,
+            context=rec_context,
+        )
+
+        self.state_manager.record_failure(
+            task_id=ctx.task_id,
+            error=err_msg,
+            classification=recovery_action.classification,
+        )
+
+        if recovery_action.strategy == RecoveryStrategy.RETRY:
+            self.state_manager.increment_retry(ctx.task_id)
+            self.logger.log_event(
+                event_type=EventType.TASK_RETRY,
+                source="orchestrator",
+                message=f"Retrying task {ctx.task_id}: {recovery_action.reason}",
+                task_id=ctx.task_id,
+                payload={"step_id": step_id, "retry_count": retry_count + 1},
+            )
+            # Reset current step to pending for retry
+            if ctx.task_graph:
+                for s in ctx.task_graph.steps:
+                    if s.step_id == step_id:
+                        s.status = "pending"
+            ctx.status = LoopStatus.RETRYING
+
+        elif recovery_action.strategy == RecoveryStrategy.RECOVER:
+            self.state_manager.increment_recovery_attempts(ctx.task_id)
+            self.logger.log_event(
+                event_type=EventType.TASK_RECOVERY_STARTED,
+                source="orchestrator",
+                message=f"Recovery started for task {ctx.task_id}: {recovery_action.reason}",
+                task_id=ctx.task_id,
+                payload={
+                    "step_id": step_id,
+                    "recovery_steps": [s.model_dump() for s in recovery_action.recovery_steps],
+                },
+            )
+            if ctx.task_graph:
+                new_steps = []
+                for s in ctx.task_graph.steps:
+                    if s.step_id == step_id:
+                        new_steps.extend(recovery_action.recovery_steps)
+                        s.status = "pending"
+                        new_steps.append(s)
+                    else:
+                        new_steps.append(s)
+                ctx.task_graph.steps = new_steps
+                self.state_manager.set_active_plan(ctx.task_id, ctx.task_graph.model_dump())
+            ctx.status = LoopStatus.RECOVERING
+
+        elif recovery_action.strategy == RecoveryStrategy.REPLAN:
+            self.state_manager.increment_replan(ctx.task_id)
+            self.logger.log_event(
+                event_type=EventType.TASK_REPLAN,
+                source="orchestrator",
+                message=f"Replanning task {ctx.task_id}: {recovery_action.reason}",
+                task_id=ctx.task_id,
+                payload={"step_id": step_id, "replan_count": replan_count + 1},
+            )
+            if ctx.task_graph:
+                self.state_manager.archive_plan(ctx.task_id, ctx.task_graph.model_dump())
+                new_graph = self.planner.replan(
+                    task_id=ctx.task_id,
+                    original_plan=ctx.task_graph,
+                    failure_reason=err_msg,
+                    context=rec_context,
+                )
+                ctx.task_graph = new_graph
+                self.state_manager.set_active_plan(ctx.task_id, new_graph.model_dump())
+                self.state_manager.set_plan_version(ctx.task_id, new_graph.version)
+            ctx.status = LoopStatus.REPLANNING
+
+        else:
+            ctx.status = LoopStatus.FAILED
 
     def run_cycle(self, context: LoopContext) -> LoopContext:
         """Run a single iteration across all 11 steps of the canonical loop."""

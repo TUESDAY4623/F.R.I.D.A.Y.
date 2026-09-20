@@ -84,3 +84,63 @@ class VerificationStatus(str, Enum):
 
     PASS = "pass"
     FAIL = "fail"
+
+
+class ApprovalStatus(str, Enum):
+    """Approval lifecycle states.
+
+    Per Section 7 & Phase 2:
+    NOT_REQUIRED: Tool/action is low risk or auto-executable.
+    PENDING: Awaiting user confirmation.
+    APPROVED: User confirmed execution.
+    DENIED: User rejected execution.
+    CANCELLED: User cancelled the entire task.
+    EXPIRED: Request timed out without user decision.
+    """
+
+    NOT_REQUIRED = "not_required"
+    PENDING = "pending"
+    APPROVED = "approved"
+    DENIED = "denied"
+    CANCELLED = "cancelled"
+    EXPIRED = "expired"
+
+
+class FailureClassification(str, Enum):
+    """Failure classification for recovery and retry decisions.
+
+    Per Section 14 & Phase 2:
+    RETRYABLE: Transient failure (network/timeout, locked file). Retry with backoff.
+    RECOVERABLE: Precondition failed that can be fixed automatically (missing parent dir).
+    REPLAN_REQUIRED: Goal cannot be achieved with current approach, alternate path needed.
+    USER_ACTION_REQUIRED: Requires user input, credentials, or manual intervention.
+    FATAL: Unrecoverable error (non-existent source file, invalid syntax, budget exhausted).
+    """
+
+    RETRYABLE = "retryable"
+    RECOVERABLE = "recoverable"
+    REPLAN_REQUIRED = "replan_required"
+    USER_ACTION_REQUIRED = "user_action_required"
+    FATAL = "fatal"
+
+
+class RecoveryStrategy(str, Enum):
+    """Recovery strategy chosen by Recovery Manager.
+
+    Per Section 14 & Phase 2:
+    RETRY: Re-execute same action after backoff.
+    RECOVER: Inject recovery action to satisfy failed precondition.
+    REOBSERVE: Capture fresh observation before deciding.
+    REPLAN: Request new task graph from Planner.
+    ALTERNATE_TOOL: Substitute alternative tool.
+    USER_INTERVENTION: Escalate to user.
+    STOP: Terminate task as failed.
+    """
+
+    RETRY = "retry"
+    RECOVER = "recover"
+    REOBSERVE = "reobserve"
+    REPLAN = "replan"
+    ALTERNATE_TOOL = "alternate_tool"
+    USER_INTERVENTION = "user_intervention"
+    STOP = "stop"

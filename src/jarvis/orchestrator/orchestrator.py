@@ -123,13 +123,41 @@ class AgentOrchestrator:
 
         self.state_manager.update_lifecycle(tid, TaskLifecycle.EXECUTING)
 
-        # 4. Run canonical loop cycle
+        # 4. Run canonical loop cycles until terminal state
         context = LoopContext(task_id=tid, intent=intent, task_graph=task_graph)
-        result_context = self.state_machine.run_cycle(context)
+        result_context = context
+        max_loop_iterations = 25
+        iteration = 0
+
+        while iteration < max_loop_iterations:
+            iteration += 1
+            result_context = self.state_machine.run_cycle(context)
+
+            if result_context.status in (
+                LoopStatus.LOOP_COMPLETED,
+                LoopStatus.CANCELLED,
+                LoopStatus.FAILED,
+            ):
+                break
+
+        if result_context.status not in (
+            LoopStatus.LOOP_COMPLETED,
+            LoopStatus.CANCELLED,
+            LoopStatus.FAILED,
+        ):
+            result_context.status = LoopStatus.FAILED
 
         # 5. Finalize status and update State Manager
+        task_state = self.state_manager.get_state(tid)
         if result_context.status == LoopStatus.LOOP_COMPLETED:
             self.state_manager.update_lifecycle(tid, TaskLifecycle.COMPLETED)
+            if task_state and task_state.recovery_attempts > 0:
+                self.logger.log_event(
+                    event_type=EventType.TASK_RECOVERY_COMPLETED,
+                    source="orchestrator",
+                    message=f"Task {tid} recovered and completed successfully",
+                    task_id=tid,
+                )
             self.logger.log_event(
                 event_type=EventType.TASK_COMPLETED,
                 source="orchestrator",
@@ -180,7 +208,11 @@ class AgentOrchestrator:
                 if result_context.tool_result
                 else None
             ),
-            "plan_version": task_graph.version,
+            "plan_version": (
+                task_state.plan_version
+                if task_state
+                else (result_context.task_graph.version if result_context.task_graph else 1)
+            ),
             "latency_ms": round(latency_ms, 2),
         }
         response_text = self.response_manager.format_response(res_payload)

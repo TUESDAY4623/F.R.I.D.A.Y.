@@ -5,6 +5,8 @@ from jarvis.tools.create_directory import CreateDirectoryTool
 from jarvis.tools.list_directory import ListDirectoryTool
 from jarvis.tools.read_file import ReadFileTool
 from jarvis.tools.write_file import WriteFileTool
+from jarvis.tools.move_file import MoveFileTool
+from jarvis.tools.noop import NoopTool
 
 __all__ = [
     "BaseTool",
@@ -17,4 +19,6 @@ __all__ = [
     "ListDirectoryTool",
     "ReadFileTool",
     "WriteFileTool",
+    "MoveFileTool",
+    "NoopTool",
 ]

@@ -12,11 +12,11 @@ Per Section 4 & Section 8:
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-from jarvis.types import TaskLifecycle
+from jarvis.types import ApprovalStatus, FailureClassification, TaskLifecycle
 
 
 class TaskState(BaseModel):
@@ -29,12 +29,18 @@ class TaskState(BaseModel):
     current_step_name: Optional[str] = None
     is_cancelled: bool = False
     deadline: Optional[datetime] = None
+    attempt_count: int = 1
     retry_count: int = 0
     replan_count: int = 0
+    recovery_attempts: int = 0
+    last_error: Optional[str] = None
+    failure_classification: Optional[FailureClassification] = None
+    approval_status: ApprovalStatus = ApprovalStatus.NOT_REQUIRED
     metadata: Dict[str, Any] = Field(default_factory=dict)
     last_verified_state: Optional[Dict[str, Any]] = None
     step_results: Dict[str, Any] = Field(default_factory=dict)
     active_plan: Optional[Dict[str, Any]] = None
+    previous_plans: List[Dict[str, Any]] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -146,6 +152,52 @@ class StateManager:
             task.updated_at = datetime.now(timezone.utc)
             return task.replan_count
         return 0
+
+    def increment_recovery_attempts(self, task_id: str) -> int:
+        """Increment and return recovery attempts count."""
+        task = self.get_state(task_id)
+        if task:
+            task.recovery_attempts += 1
+            task.updated_at = datetime.now(timezone.utc)
+            return task.recovery_attempts
+        return 0
+
+    def increment_attempt(self, task_id: str) -> int:
+        """Increment and return overall attempt count."""
+        task = self.get_state(task_id)
+        if task:
+            task.attempt_count += 1
+            task.updated_at = datetime.now(timezone.utc)
+            return task.attempt_count
+        return 0
+
+    def record_failure(
+        self,
+        task_id: str,
+        error: str,
+        classification: Optional[FailureClassification] = None,
+    ) -> None:
+        """Record error details and failure classification in task state."""
+        task = self.get_state(task_id)
+        if task:
+            task.last_error = error
+            if classification is not None:
+                task.failure_classification = classification
+            task.updated_at = datetime.now(timezone.utc)
+
+    def set_approval_status(self, task_id: str, status: ApprovalStatus) -> None:
+        """Update approval lifecycle status in task state."""
+        task = self.get_state(task_id)
+        if task:
+            task.approval_status = status
+            task.updated_at = datetime.now(timezone.utc)
+
+    def archive_plan(self, task_id: str, plan_data: Dict[str, Any]) -> None:
+        """Archive a previous plan version when replanning."""
+        task = self.get_state(task_id)
+        if task:
+            task.previous_plans.append(plan_data)
+            task.updated_at = datetime.now(timezone.utc)
 
     def clear(self) -> None:
         """Reset all in-memory tasks (primarily for testing)."""

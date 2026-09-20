@@ -45,6 +45,9 @@ class MainWindow(QMainWindow):
     ) -> None:
         super().__init__()
 
+        from jarvis.bootstrap import bootstrap_agent
+
+        bootstrap_agent()
         self.logger = logger or get_logger()
         self.orchestrator = orchestrator or AgentOrchestrator(
             logger=self.logger
@@ -248,19 +251,17 @@ class MainWindow(QMainWindow):
             "tool.started",
             "tool.completed",
             "tool.failed",
-            "orchestrator.step",
         ):
             payload = getattr(event, "payload", {}) or {}
             msg = getattr(event, "message", "")
 
-            if "tool" in event_type_val or (step_name and "Dispatch" in step_name):
-                tool_data = {
-                    "type": event_type_val,
-                    "step_name": step_name,
-                    "message": msg,
-                    "payload": payload,
-                }
-                self.tool_event_signal.emit(tool_data)
+            tool_data = {
+                "type": event_type_val,
+                "step_name": step_name,
+                "message": msg,
+                "payload": payload,
+            }
+            self.tool_event_signal.emit(tool_data)
 
     def _update_task_state(self, state: str) -> None:
         """Update the task state status line / badge with color coding."""
@@ -304,12 +305,7 @@ class MainWindow(QMainWindow):
             or (step_name if step_name else "Tool Action")
         )
 
-        is_start = event_type in ("tool.started", "tool.requested") or (
-            event_type == "orchestrator.step"
-            and step_name
-            and "Dispatch action" in step_name
-            and tool_name not in self._active_tool_items
-        )
+        is_start = event_type in ("tool.started", "tool.requested")
 
         is_end = (
             event_type in ("tool.completed", "tool.failed")
@@ -387,4 +383,4 @@ def run_app() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(run_app())
+    raise SystemExit(run_app())

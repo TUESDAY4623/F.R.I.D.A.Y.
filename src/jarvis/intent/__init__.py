@@ -95,26 +95,89 @@ class IntentManager:
                 raw_text=raw,
             )
 
-        # 2. Pattern: Move/Rename file
-        # e.g., "move file old.txt to new.txt" or "move old.txt to new.txt"
+        # 2. Pattern: Create directory / folder
+        # e.g., "Create a directory called test", "Create directory test", "Make a new folder called test"
+        create_dir_match = re.search(
+            r"^(?:create|make)\s+(?:a\s+)?(?:new\s+)?(?:directory|folder|dir)(?:\s+called)?\s+(?:\"([^\"]+)\"|'([^']+)'|(.*))$",
+            raw,
+            re.IGNORECASE,
+        )
+        if create_dir_match:
+            dir_path = (
+                create_dir_match.group(1)
+                or create_dir_match.group(2)
+                or create_dir_match.group(3)
+                or ""
+            ).strip()
+            if dir_path:
+                return IntentResult(
+                    intent=raw,
+                    action_type="create_directory",
+                    entities={"path": dir_path},
+                    context=context_data,
+                    raw_text=raw,
+                )
+
+        # 3. Pattern: Move/Rename file
+        # e.g., "move file old.txt to new.txt", 'move file "A.txt" to "My Folder"', "Move file A to directory B", "move file from A to B"
         move_match = re.search(
-            r"move\s+(?:file\s+)?[\"']?([^\s\"']+)[\"']?\s+to\s+[\"']?([^\s\"']+)[\"']?",
+            r"^(?:move|rename)\s+(?:file\s+)?(?:from\s+)?(?:\"([^\"]+)\"|'([^']+)'|(.+?))\s+to\s+(?:\"([^\"]+)\"|'([^']+)'|(.+))$",
             raw,
             re.IGNORECASE,
         )
         if move_match:
-            src = move_match.group(1)
-            dest = move_match.group(2)
+            src = (
+                move_match.group(1)
+                or move_match.group(2)
+                or move_match.group(3)
+                or ""
+            ).strip()
+            dest = (
+                move_match.group(4)
+                or move_match.group(5)
+                or move_match.group(6)
+                or ""
+            ).strip()
+            if src and dest:
+                return IntentResult(
+                    intent=raw,
+                    action_type="file_move",
+                    entities={
+                        "source": src,
+                        "destination": dest,
+                        "source_path": src,
+                        "destination_path": dest,
+                    },
+                    context=context_data,
+                    raw_text=raw,
+                )
+
+        # 4. Pattern: Write file
+        # Format 4a: "write 'Hello Jarvis' to test.txt" or 'write "content" to file path'
+        write_to_match = re.search(
+            r"^write\s+(?:content\s+)?(?:\"([^\"]+)\"|'([^']+)')\s+to\s+(?:file\s+)?(?:\"([^\"]+)\"|'([^']+)'|(.*))$",
+            raw,
+            re.IGNORECASE | re.DOTALL,
+        )
+        if write_to_match:
+            content = (
+                write_to_match.group(1) or write_to_match.group(2) or ""
+            ).strip()
+            path = (
+                write_to_match.group(3)
+                or write_to_match.group(4)
+                or write_to_match.group(5)
+                or ""
+            ).strip()
             return IntentResult(
                 intent=raw,
-                action_type="file_move",
-                entities={"source_path": src, "destination_path": dest},
+                action_type="file_write",
+                entities={"path": path, "content": content},
                 context=context_data,
                 raw_text=raw,
             )
 
-        # 3. Pattern: Write file
-        # e.g., "write file C:\Users\Sujit Kumar\out.txt with content Hello World"
+        # Format 4b: "write file C:\path\out.txt with content Hello World"
         write_match = re.search(
             r"^write\s+(?:to\s+|file\s+)?[\"']?(.*?)[\"']?\s+with\s+content\s+(.*)$",
             raw,
@@ -137,7 +200,7 @@ class IntentManager:
                 raw_text=raw,
             )
 
-        # 4. Pattern: Read file
+        # 5. Pattern: Read file
         # e.g., "read file C:\path\with spaces\notes.txt"
         read_match = re.search(
             r"^(?:read\s+file|read|cat|view\s+file)\s+[\"']?(.*?)[\"']?$",
@@ -154,15 +217,22 @@ class IntentManager:
                 raw_text=raw,
             )
 
-        # 5. Pattern: List directory
-        # e.g., "list directory C:\path\with spaces\folder"
+        # 6. Pattern: List directory
+        # e.g., "list directory C:\path\with spaces\folder", "List files in this directory"
         list_match = re.search(
-            r"^(?:list\s+directory|list\s+dir|list|ls|dir)\s+[\"']?(.*?)[\"']?$",
+            r"^(?:list\s+(?:files\s+in\s+)?directory|list\s+files\s+in\s+this\s+directory|list\s+files\s+in|list\s+dir|list|ls|dir)\s*[\"']?(.*?)[\"']?$",
             raw,
             re.IGNORECASE,
         )
         if list_match:
             path = list_match.group(1).strip()
+            if not path or path.lower() in (
+                "this directory",
+                "here",
+                "current directory",
+                ".",
+            ):
+                path = "."
             return IntentResult(
                 intent=raw,
                 action_type="file_list",

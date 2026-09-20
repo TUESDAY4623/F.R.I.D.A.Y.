@@ -4,16 +4,23 @@ This document provides a complete architectural blueprint, subsystem catalog, an
 
 ---
 
-## 1. Phase 0 Status: Completed (Sujeet's Scope)
+## 1. Project Phase Status
 
-Phase 0 establishes the foundation of the Jarvis Desktop Agent as a **modular monolith** running within a single process with strict internal module boundaries. All requirements for Sujeet's scope are fully implemented, wired, and verified:
+### Phase 0 Status: Completed
+Phase 0 established the modular monolith foundation, Tool Registry contract, 11-step canonical loop, and Event Logger.
 
-1. **Modular Monolith Foundation (Section 1)**: Initialized as a single-process Python project using `uv` and Hatchling packaging, maintaining strict module boundaries where each component has single, non-overlapping ownership.
-2. **Tool Registry Contract (Section 11)**: Formalized as a shared Pydantic contract (`ToolContract`, `ToolRegistry`, `BaseTool`, `ToolResult`) before any real tools are built against it. Strict safety invariants are enforced at initialization (e.g. `reversible: False` must be `HIGH` risk; `MEDIUM` risk must declare `reversible: True` and specify a `rollback_strategy`).
-3. **Orchestrator 11-Step Canonical Loop (Section 2)**: Defined as an explicit state machine (`CanonicalLoopStateMachine`) and task coordinator (`AgentOrchestrator`). Every step functions as an explicit state machine handler that logs its own name through the Event Logger and delegates to the owning component.
-4. **Event Logger (Section 13)**: Fully wired as the first real component. Features sensitive credential redaction (`[REDACTED]`), in-memory ring buffering with querying, disk persistence, and real-time live streaming subscribers for UI log panes.
-5. **Component Stubs (Section 4)**: All subsystems defined per the Section 4 responsibility table as typed interfaces and pass-through stubs so team members (Adarsh, Tanmay, Sujeet) have stable contracts to build against in Phase 1+.
-6. **Deterministic Verification**: 100% test pass rate across 29 automated test cases via `pytest`, and clean end-to-end execution of the Phase 0 "Hello Loop" via `main.py`.
+### Phase 1 Status: Completed
+Phase 1 established the functional execution core, Intent analysis, TaskGraph planning, 5 filesystem tools, risk-based policy checks, failure propagation, and PySide6 UI tool execution tree. (69 passing tests).
+
+### Phase 2 Status: In Progress (Sujeet Core Implementation Complete & Verified)
+Phase 2 implements core brain verification, failure handling, recovery, retry, replanning, and approval lifecycle:
+1. **5-Category Failure Classification**: `RETRYABLE`, `RECOVERABLE`, `REPLAN_REQUIRED`, `USER_ACTION_REQUIRED`, `FATAL`.
+2. **Controlled Bounded Retries**: Automatic retries for transient failures bounded by `max_retries=3`, emitting `task.retry`.
+3. **Normal Pipeline Auto-Recovery**: Injecting compensatory steps (e.g. `create_directory` for missing parent/destination folders on `move_file` and `write_file`) into the task graph through `ToolManager.dispatch()`, emitting `task.recovery_started` and `task.recovery_completed`.
+4. **Replanning on Verification Failure**: `Planner.replan()` generates revised `TaskGraph` with incremented `version`, archiving previous plans into `TaskState.previous_plans`, emitting `task.replan`.
+5. **Approval Lifecycle**: Explicit lifecycle states (`NOT_REQUIRED`, `PENDING`, `APPROVED`, `DENIED`, `CANCELLED`, `EXPIRED`) with event emission (`task.approval_pending`, `task.approval_approved`, `task.approval_denied`).
+6. **Step 1 Cancellation & Deadline Check**: Halts immediately on cancellation or deadline expiration with `task.cancelled` or `task.timeout`.
+7. **81 Passing Automated Tests**: 100% pass rate across 81 automated tests and zero Phase 0/1 regressions.
 
 ---
 
@@ -83,6 +90,12 @@ Phase 0 establishes the foundation of the Jarvis Desktop Agent as a **modular mo
   - Instantiates `AgentOrchestrator` and executes a task through all 11 canonical loop steps.
   - Verifies that all 11 steps completed and logged their events.
 
+#### `jarvis_ui.py`
+- **Why Created**: Phase 1 PySide6 GUI launcher and desktop observability dashboard.
+- **Usage**:
+  - Bootstraps default tool registry and core agent components via `bootstrap_agent()`.
+  - Launches `MainWindow` with task input, state badge, streaming Event Logger pane, and Collapsible Tool Call Tree.
+
 ---
 
 ### 3.2 Core Shared Types (`src/jarvis/types.py`)
@@ -142,8 +155,36 @@ Phase 0 establishes the foundation of the Jarvis Desktop Agent as a **modular mo
 - **Usage**: Validates that tool instances conform to `ToolContract` upon `register()`, enforces name uniqueness, and provides safe tool lookup via `get(name)` and `list_tools()`.
 
 #### `src/jarvis/tools/manager.py`
-- **Why Created**: Tool Manager for controlled tool execution (originally a Phase 0 stub, now contains early Phase 1 implementation by Adarsh).
-- **Usage**: Provides `dispatch(tool_name, arguments)` to invoke tools registered with `ToolRegistry`. Validates tool requests and arguments against `input_schema`, checks policy decisions via `PolicyEngine`, executes tools with contract-defined timeouts via `ThreadPoolExecutor`, and normalizes exceptions into `ToolResult`. Some Phase 1-oriented functionality (argument validation, timeout enforcement) is already implemented. This is treated as scope implemented early, not as evidence that Phase 1 is complete.
+- **Why Created**: Tool Manager execution gateway.
+- **Usage**: Provides `dispatch(tool_name, arguments, approval_decision)` to invoke tools registered with `ToolRegistry`. Validates arguments against schema, verifies policy permissions, gates `CONFIRM` (MEDIUM risk) actions based on user approval, executes tools within timeout limits, and normalizes execution results into `ToolResult`.
+
+#### `src/jarvis/tools/read_file.py`
+- **Why Created**: Implements `ReadFileTool` (`read_file`).
+- **Usage**: LOW risk tool to safely read text files within workspace boundaries.
+
+#### `src/jarvis/tools/write_file.py`
+- **Why Created**: Implements `WriteFileTool` (`write_file`).
+- **Usage**: MEDIUM risk tool with rollback strategy to create or overwrite text files.
+
+#### `src/jarvis/tools/list_directory.py`
+- **Why Created**: Implements `ListDirectoryTool` (`list_directory`).
+- **Usage**: LOW risk tool to inspect files and directories.
+
+#### `src/jarvis/tools/create_directory.py`
+- **Why Created**: Implements `CreateDirectoryTool` (`create_directory`).
+- **Usage**: LOW risk tool to create directories on the filesystem.
+
+#### `src/jarvis/tools/move_file.py`
+- **Why Created**: Implements `MoveFileTool` (`move_file`).
+- **Usage**: MEDIUM risk tool with rollback strategy to move or rename files.
+
+#### `src/jarvis/tools/noop.py`
+- **Why Created**: Implements `NoopTool` (`noop_tool`).
+- **Usage**: LOW risk no-op probe tool supporting loop benchmarking and Phase 0 compatibility.
+
+#### `src/jarvis/bootstrap.py`
+- **Why Created**: Agent bootstrap and default registry population.
+- **Usage**: Automatically registers all standard filesystem tools (`read_file`, `write_file`, `list_directory`, `create_directory`, `move_file`) and `noop_tool` into the `ToolRegistry` so the agent is ready out of the box.
 
 ---
 
@@ -283,10 +324,29 @@ To preserve strict module boundaries and prevent developers from absorbing other
 - **Coverage**:
   - Verifies 100% task success rate across multiple orchestrator iterations with sub-500ms average latency.
 
-#### `tests/test_ui.py`
-- **Why Created**: Validates PySide6 UI shell (Windows-only).
-- **Coverage**:
-  - Verifies window initialization, empty input handling, orchestrator request submission, task state badge updates, and tool call tree event handling.
+#### `tests/test_create_directory.py`
+- **Why Created**: Validates `CreateDirectoryTool` specification and directory creation logic.
+- **Coverage**: Verifies contract fields, successful directory creation, existing path rejection, missing path error, and type validation.
+
+#### `tests/test_write_file.py`
+- **Why Created**: Validates `WriteFileTool` specification and file writing operations.
+- **Coverage**: Verifies contract fields, write execution, and file overwriting behavior.
+
+#### `tests/test_move_file.py`
+- **Why Created**: Validates `MoveFileTool` specification and move/rename operations.
+- **Coverage**: Verifies contract fields (`MEDIUM` risk, `reversible: True`), successful file move, missing source error, existing destination collision prevention, and missing arguments validation.
+
+#### `tests/test_filesystem_integration.py`
+- **Why Created**: Validates integrated filesystem tools dispatched through `ToolManager`.
+- **Coverage**: Verifies `read_file`, `write_file`, `create_directory`, `list_directory`, and tool registry registration.
+
+#### `tests/test_phase1_sujeet_core.py`
+- **Why Created**: Validates Phase 1 Core Brain modules and boundaries.
+- **Coverage**: Verifies `IntentManager` parsing, `Planner` task graph generation, `StateManager` lifecycle and plan versioning, and Orchestrator 11-step execution without tool execution leaks.
+
+#### `tests/test_phase1_resolution.py`
+- **Why Created**: Comprehensive regression test suite verifying resolution of all 7 Phase 1 blocking issues.
+- **Coverage**: Verifies `move_file` integration, regex parsing for directory creation and moves with spaces/quotes, `write to` syntax, schema harmonization, policy/approval gating, honest failure propagation, bootstrap registry, UI lifecycle event emission, and full end-to-end filesystem execution.
 
 ---
 
@@ -299,14 +359,14 @@ uv run python main.py
 **Expected Output**:
 - Successfully registers `hello_probe` tool against `ToolRegistry`.
 - Executes all 11 canonical loop steps in sequence.
-- Streams 16 structured events live through the Event Logger.
+- Streams 18 structured events live through the Event Logger.
 
 ### 4.2 Running the Test Suite
 ```bash
 uv run pytest -v
 ```
 **Expected Output**:
-- 29 passed, 0 failed across all test modules.
+- 69 passed, 0 failed across all test modules (1.30s execution time).
 
 ---
 
@@ -326,37 +386,40 @@ The following components already contain implementation beyond the original Phas
 
 ---
 
-## 6. Phase 1 Transition & Scope: Core Brain (Sujeet)
+## 6. Phase 1 Status: Completed (Unified Integration & Sign-Off)
 
 **Phase 0**: COMPLETED<br>
-**Phase 1**: IN PROGRESS<br>
-**Phase 1 Owner Scope**: Sujeet — Core Brain<br>
-**Start Date**: 2026-09-16<br>
+**Phase 1**: COMPLETED<br>
+**Sign-off**: PASS — ALL EXIT CRITERIA SATISFIED<br>
+**Date**: 2026-09-20<br>
+**Test Suite**: 69 passed, 0 failed via `uv run pytest -v`<br>
 
 ### 6.1 Purpose of Phase 1
 > **Core loop, text only.**
 
-Phase 1 elevates the Jarvis Desktop Agent from the verified Phase 0 skeleton into a functional, text-driven execution core. It wires the user's text requests through structured intent analysis, dynamic task-graph planning, and state-machine orchestration across the canonical 11-step execution loop.
+Phase 1 elevates the Jarvis Desktop Agent from the verified Phase 0 skeleton into a fully functional, text-driven execution core. It wires user text requests through structured intent analysis, dynamic task-graph planning, and state-machine orchestration across the canonical 11-step execution loop.
 
 ### 6.2 Phase 1 Exit Criterion
 > **The 11-step loop runs reliably end-to-end on 3–4 real file tools using text input only.**
 
-**Current Phase 1 Status**: NOT YET COMPLETE (IN PROGRESS)<br>
-- **Phase 0**: Completed, cleaned up, verified (29 passed, 0 failed), and signed off.
-- **Phase 1**: Now in progress under Sujeet's core brain implementation. Full Phase 1 sign-off requires end-to-end verification across the team's real file tools.
+**Phase 1 Status**: VERIFIED / COMPLETED
+- All 5 filesystem tools (`read_file`, `write_file`, `list_directory`, `create_directory`, `move_file`) run reliably end-to-end through the 11-step canonical loop with text input only.
+- 100% test pass rate across 69 automated test cases (1.30s execution time).
+- Phase 0 Hello Loop verified with 0 regressions (11/11 steps, 18 streamed events).
 
-### 6.3 Completed by Sujeet (Core Brain Implementation)
+### 6.3 Integrated Phase 1 Subsystems
 
 1. **Intent / Context Manager (`src/jarvis/intent/`)**:
    - Accepts raw user text commands.
-   - Extracts structured `IntentResult` with action types (`file_read`, `file_write`, `file_list`, `file_move`, `file_pipeline`, `general`) and parsed path/content entities.
+   - Extracts structured `IntentResult` with action types (`file_read`, `file_write`, `file_list`, `file_move`, `create_directory`, `file_pipeline`, `general`) and parsed path/content entities.
+   - Supports natural command variations: `create directory <path>`, `mkdir <path>`, `make folder <path>`, `move "path with spaces" to "target"`, `write "text" to <path>`, and directory listing defaults (`.` for current directory).
    - Integrates read-only access to `MemoryManager` for conversation turns and persistent user preferences.
    - Strictly does NOT execute tools or mutate Memory.
 
 2. **Task Graph Planner (`src/jarvis/planner/`)**:
    - Consumes `IntentResult` and context to produce a structured, typed `TaskGraph`.
    - Generates discrete `PlanStep` sequences with tool names, arguments, and expected outcomes per step.
-   - Supports deterministic file reading, writing, listing, moving, and multi-step pipeline plans.
+   - Harmonized schemas for all filesystem tools: `create_directory` (`{"path": ...}`) and `move_file` (`{"source": ..., "destination": ...}`).
    - Provides backward-compatible fallback (`noop_tool`) preserving Phase 0 Hello Loop execution.
    - Strictly does NOT execute tools, bypass Policy, or mutate application state directly.
 
@@ -374,16 +437,37 @@ Phase 1 elevates the Jarvis Desktop Agent from the verified Phase 0 skeleton int
    - Integrates `TaskMetricsCollector` tracking total tasks, success rate, first-attempt pass rate, and execution latency.
    - Integrates `ResponseManager` to format final human-readable responses.
    - Preserves strict ownership boundaries: delegates observation to `ObservationManager`, verification to `VerificationEngine`, policy evaluation to `PolicyEngine`, and tool dispatch to `ToolManager`.
+   - Propagates honest failures: sets `TaskLifecycle.FAILED`, logs `task.failed`, and never emits false `task.completed`.
 
 5. **Canonical Loop State Machine (`src/jarvis/orchestrator/loop.py`)**:
-   - Step 3 dynamically retrieves the next pending step from the Planner's `TaskGraph`.
-   - Step 4 looks up registered tool contracts in `ToolRegistry` for accurate `PolicyEngine` evaluation.
-   - Step 8 passes step-specific expected outcomes to the `VerificationEngine`.
-   - Step 9 records step results into `StateManager` and marks steps completed in the active `TaskGraph`.
-   - Step 10 logs status events via `EventLogger`.
-   - Maintains 100% adherence to the canonical 11-step execution sequence.
+   - Step 1: Checks cancellation and deadlines in `StateManager`.
+   - Step 2: Gathers baseline observations from `ObservationManager`.
+   - Step 3: Retrieves next pending step from Planner's `TaskGraph`.
+   - Step 4: Evaluates tool contracts via `PolicyEngine` (`ALLOW`, `CONFIRM`, `DENY`).
+   - Step 5: Resolves human-in-the-loop approval via `ApprovalManager`.
+   - Step 6: Emits `tool.started`, forwards approval decision to `ToolManager.dispatch()`, and emits `tool.completed` / `tool.failed`.
+   - Step 7: Gathers post-action state via `ObservationManager`.
+   - Step 8: Evaluates expected outcomes in `VerificationEngine`, returning `FAIL` on tool errors.
+   - Step 9: Records step results and marks step completion in `StateManager`.
+   - Step 10: Dispatches structured events to `EventLogger`.
+   - Step 11: Evaluates continuation/retry/replan; halts loop with `LoopStatus.FAILED` upon errors.
 
-### 6.4 Current Brain Architecture
+6. **Filesystem Toolset (`src/jarvis/tools/`)**:
+   - `read_file` (`ReadFileTool`): LOW risk, read text files.
+   - `write_file` (`WriteFileTool`): MEDIUM risk, write/overwrite text files.
+   - `list_directory` (`ListDirectoryTool`): LOW risk, enumerate directory entries.
+   - `create_directory` (`CreateDirectoryTool`): LOW risk, create folders.
+   - `move_file` (`MoveFileTool`): MEDIUM risk, move/rename files with rollback strategy.
+   - All tools conform to the 11-field `ToolContract` with validated runtime invariants.
+
+7. **Default Registry Bootstrap (`src/jarvis/bootstrap.py`)**:
+   - Automatically registers all default tools (`read_file`, `write_file`, `list_directory`, `create_directory`, `move_file`, `noop_tool`) in `ToolRegistry` via `bootstrap_agent()` and `get_tool_registry()`.
+
+8. **Text UI & Observability (`jarvis_ui.py`, `src/jarvis/ui/`)**:
+   - PySide6 desktop interface with task input, lifecycle state badge, Event Logger streaming pane, and Collapsible Tool Call Tree.
+   - Real-time tool execution tracking displaying tool name, arguments, status transitions (`RUNNING` → `SUCCESS` or `FAILED`), and outputs/errors.
+
+### 6.4 Brain & Execution Architecture
 
 ```
                  [ User Text Input ]
@@ -416,9 +500,3 @@ Phase 1 elevates the Jarvis Desktop Agent from the verified Phase 0 skeleton int
                           ▼
                   [ State Manager ] ──► [ Agent Result / Response ]
 ```
-
-### 6.5 Dependencies for Full Phase 1 Exit
-Full completion and sign-off of Phase 1 depends on:
-1. **Adarsh's Scope**: Integration with 3–4 real file tools (`read_file`, `write_file`, `list_directory`, `move_file`) registered in `ToolRegistry`.
-2. **Tanmay's Scope**: Text UI enhancements, live streaming log pane integration, and status badge coordination.
-3. **End-to-End Verification**: Validating the 11-step loop running reliably end-to-end on real file operations with text input only.

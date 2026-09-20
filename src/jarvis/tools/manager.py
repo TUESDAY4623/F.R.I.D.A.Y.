@@ -30,6 +30,7 @@ class ToolManager:
         self,
         tool_name: str,
         arguments: Dict[str, Any],
+        approval_decision: Optional[Any] = None,
     ) -> ToolResult:
         """Validate, authorize, execute, and normalize a tool request."""
 
@@ -83,11 +84,19 @@ class ToolManager:
             )
 
         if decision == PolicyDecision.CONFIRM:
-            return ToolResult(
-                success=False,
-                error=f"Tool '{tool_name}' requires approval before execution",
-                metadata={"policy_decision": decision.value},
+            from jarvis.types import ApprovalDecision
+
+            is_approved = (
+                approval_decision is True
+                or approval_decision == ApprovalDecision.APPROVE
+                or (isinstance(approval_decision, str) and approval_decision.lower() == "approve")
             )
+            if not is_approved:
+                return ToolResult(
+                    success=False,
+                    error=f"Tool '{tool_name}' requires approval before execution",
+                    metadata={"policy_decision": decision.value},
+                )
 
         # 5. Execute with timeout
         executor = ThreadPoolExecutor(max_workers=1)

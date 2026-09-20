@@ -137,15 +137,27 @@ class Planner:
                 )
             )
 
+        elif action_type == "create_directory":
+            path = entities.get("path", "")
+            steps.append(
+                PlanStep(
+                    step_id="step-1",
+                    tool_name="create_directory",
+                    arguments={"path": path},
+                    expected_outcome={"status": "completed", "action": "create_directory", "path": path},
+                    description=f"Create directory: {path}",
+                )
+            )
+
         elif action_type == "file_move":
-            src = entities.get("source_path", "")
-            dest = entities.get("destination_path", "")
+            src = entities.get("source") or entities.get("source_path", "")
+            dest = entities.get("destination") or entities.get("destination_path", "")
             steps.append(
                 PlanStep(
                     step_id="step-1",
                     tool_name="move_file",
-                    arguments={"source_path": src, "destination_path": dest},
-                    expected_outcome={"status": "completed", "action": "file_move"},
+                    arguments={"source": src, "destination": dest},
+                    expected_outcome={"status": "completed", "action": "file_move", "source": src, "destination": dest},
                     description=f"Move file from {src} to {dest}",
                 )
             )
@@ -192,6 +204,47 @@ class Planner:
             version=1,
             metadata=metadata,
         )
+
+    def replan(
+        self,
+        task_id: str,
+        original_plan: TaskGraph,
+        failure_reason: str,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> TaskGraph:
+        """Produce a revised TaskGraph addressing a failure or verification discrepancy."""
+        new_version = original_plan.version + 1
+        new_metadata = dict(original_plan.metadata)
+        new_metadata["replan_reason"] = failure_reason
+        new_metadata["previous_version"] = original_plan.version
+
+        # If context provides explicit replan steps
+        if context and "replan_steps" in context:
+            replan_steps = context["replan_steps"]
+        else:
+            # Re-generate pending or failed steps, resetting their status to 'pending'
+            replan_steps = []
+            for s in original_plan.steps:
+                if s.status != "completed":
+                    replan_steps.append(
+                        PlanStep(
+                            step_id=f"{s.step_id}-v{new_version}",
+                            tool_name=s.tool_name,
+                            arguments=dict(s.arguments),
+                            expected_outcome=dict(s.expected_outcome),
+                            description=f"[Replanned v{new_version}] {s.description}",
+                            status="pending",
+                        )
+                    )
+
+        return TaskGraph(
+            task_id=task_id,
+            intent=original_plan.intent,
+            steps=replan_steps,
+            version=new_version,
+            metadata=new_metadata,
+        )
+
 
 
 _default_planner: Optional[Planner] = None

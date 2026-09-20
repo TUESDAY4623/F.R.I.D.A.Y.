@@ -8,8 +8,69 @@ Rules: Append-only, new entries added at the top (most recent first). Never edit
 ## Current Status
 
 **Phase 0: COMPLETED**
-**Sign-off: PASS WITH NON-BLOCKING ISSUES**
-**Phase 1: IN PROGRESS (Owner Scope: Sujeet — Core Brain)**
+**Phase 1: COMPLETED**
+**Phase 2: IN PROGRESS (Sujeet Core Implementation Complete & Verified)**
+**Sign-off: PASS — 81 TESTS PASSING (0 REGRESSIONS)**
+
+---
+
+## 2026-09-20 — Phase 1 Final Verification & Phase 2 Sujeet Core Completion
+
+### Phase 1
+- Resolved all verified Phase 1 blocking issues.
+- Integrated all five filesystem tools.
+- Fixed IntentManager and Planner contract mismatches.
+- Fixed Policy/Approval/ToolManager integration.
+- Fixed false-success reporting.
+- Added default ToolRegistry bootstrap.
+- Added tool lifecycle events for UI observability.
+- Independently verified 69/69 tests passing.
+- Phase 1 regression: 0.
+- Phase 1 status: VERIFIED / READY FOR SIGN-OFF.
+
+### Phase 2 — Sujeet Core
+- Implemented failure classification.
+- Implemented bounded retry handling.
+- Implemented automatic recovery.
+- Implemented recovery-plan injection through the normal ToolManager pipeline.
+- Implemented Planner replanning with plan versioning and previous-plan preservation.
+- Implemented approval lifecycle states.
+- Implemented cancellation and deadline handling.
+- Enhanced StateManager with retry, recovery, approval, failure, and previous-plan state.
+- Enhanced AgentOrchestrator for multi-cycle execution.
+- Added Phase 2 structured events.
+- Added 12 Phase 2 recovery/approval tests.
+- Final test suite: 81/81 passing.
+- Phase 1 regression: 69/69 passing.
+- Independent Phase 2 audit: VERIFIED / READY FOR SIGN-OFF.
+- Phase 2 core status: COMPLETED / READY FOR UI INTEGRATION.
+
+### Next Handoff
+- Phase 2 UI/dialog integration remains for the UI workstream.
+
+---
+
+## 2026-09-20 — Phase 1 Final Resolution & Sign-Off (All Contributors)
+
+- **Status**: COMPLETED
+- **Sign-off**: PASS — ALL EXIT CRITERIA SATISFIED
+- **Summary**: Successfully resolved all 7 verified blockers from the Phase 1 verification audit against commit `36ed55a`, preserved strict modular monolith boundaries and the 11-step canonical loop, verified all 5 filesystem tools end-to-end, and achieved 100% test pass rate across 69 tests.
+
+### Seven Blockers Resolved
+1. **Blocker 1 — `move_file` tool integrated**: Retrieved `MoveFileTool` from branch `adarsh/phase-1-filesystem-tools`, verified contract invariants (`risk_level: MEDIUM`, `reversible: True`, `rollback_strategy: "move_file"`), exported in `src/jarvis/tools/__init__.py`, registered in bootstrap registry, and added comprehensive unit test suite (`tests/test_move_file.py`, 5/5 passing).
+2. **Blocker 2 — `IntentManager` regex & grammar fixes**: Added missing `create_directory` pattern support (`create directory <path>`, `mkdir <path>`, `make folder <path>`), repaired `move_file` parsing to handle quoted strings and spaces in source and destination paths, added `write "content" to <path>` syntax, and normalized relative paths (`.` for current directory listing).
+3. **Blocker 3 — `Planner` schema harmonization**: Mapped `create_directory` intent to the registered `create_directory` tool (`{"path": ...}`) and harmonized `file_move` step arguments to canonical schema `{"source": ..., "destination": ...}` matching `MoveFileTool`'s contract.
+4. **Blocker 4 — `ToolManager` & Policy/Approval Integration**: Updated `ToolManager.dispatch()` to accept `approval_decision`. For `MEDIUM` risk actions requiring `CONFIRM` by Policy, tool execution proceeds if approved (`APPROVE`) and is blocked with `ToolResult(success=False, error="Action was not approved by user")` when unapproved or denied. Wired `CanonicalLoopStateMachine` Step 6 to forward `ctx.approval_decision`.
+5. **Blocker 5 — Honest Failure Propagation**: Updated `VerificationEngine` to verify `tool_success` from observed state, returning `FAIL` if the tool encountered an error. Updated `CanonicalLoopStateMachine` Step 11 to set `LoopStatus.FAILED` when step execution or verification fails. Updated `AgentOrchestrator` to log `task.failed`, record failure metrics, and set `TaskLifecycle.FAILED`, eliminating false `task.completed` emissions on failed operations.
+6. **Blocker 6 — Default Tool Registry Population & Bootstrap**: Created `src/jarvis/bootstrap.py` (`register_default_tools()`, `bootstrap_agent()`) registering all 5 filesystem tools (`read_file`, `write_file`, `list_directory`, `create_directory`, `move_file`) and `noop_tool`. Configured `get_tool_registry()` to auto-populate default tools so all tools are available out of the box in the orchestrator, UI, and scripts.
+7. **Blocker 7 — Tool Call Observability in UI**: Emitted `EventType.TOOL_STARTED` and `EventType.TOOL_COMPLETED` / `EventType.TOOL_FAILED` with tool name, arguments, and execution results in Step 6 of the canonical loop. Updated `jarvis_ui.py` to bootstrap the agent and `MainWindow` to track tool lifecycle events, allowing UI tree items to transition dynamically from `RUNNING` to `SUCCESS` or `FAILED`.
+
+### Final Verification Results
+- **Automated Test Suite**: 69 tests passed, 0 failed via `uv run pytest -v` (1.30s execution time).
+- **Phase 0 Regression Safety**: Clean execution of `main.py` Hello Loop executing 11/11 steps in exact canonical sequence with 18 streamed events.
+- **End-to-End Real Filesystem Tools**: All 5 filesystem tools (`read_file`, `write_file`, `list_directory`, `create_directory`, `move_file`) verified end-to-end through `AgentOrchestrator.execute_task()`.
+- **Negative & Failure Path Verification**: Verified failure propagation for missing files, invalid move operations, unregistered tools, and denied approvals without false completion events.
+- **UI Tool Execution Observability**: Verified tree item creation and status transitions for running, successful, and failing tool operations.
 
 ---
 ## 2026-09-16 — Phase 1 (Tanmay)

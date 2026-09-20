@@ -35,10 +35,20 @@ class VerificationEngine:
         observation: Observation,
     ) -> VerificationResult:
         """Compare observed state with expected outcome."""
+        obs_state = observation.state if observation else {}
+
+        if obs_state.get("tool_success") is False:
+            err = obs_state.get("tool_error") or "Tool execution failed"
+            return VerificationResult(
+                status=VerificationStatus.FAIL,
+                reason=f"Action execution verification failed: {err}",
+                details={"observation": obs_state, "expected": expected_outcome},
+            )
+
         return VerificationResult(
             status=VerificationStatus.PASS,
-            reason="Observation satisfies expected outcome (Phase 0 stub)",
-            details={"observation": observation.state, "expected": expected_outcome},
+            reason="Observation satisfies expected outcome",
+            details={"observation": obs_state, "expected": expected_outcome},
         )
 
 

@@ -36,6 +36,7 @@ class EventType(str, Enum):
     TASK_FAILED = "task.failed"
     TASK_CANCELLED = "task.cancelled"
     TASK_PAUSED = "task.paused"
+    TASK_TIMEOUT = "task.timeout"
 
     # Intent and Planning
     INTENT_DETECTED = "intent.detected"
@@ -52,6 +53,9 @@ class EventType(str, Enum):
     POLICY_DECISION = "policy.decision"
     APPROVAL_REQUESTED = "approval.requested"
     APPROVAL_DECISION = "approval.decision"
+    TASK_APPROVAL_PENDING = "task.approval_pending"
+    TASK_APPROVAL_APPROVED = "task.approval_approved"
+    TASK_APPROVAL_DENIED = "task.approval_denied"
 
     # Tool Execution
     TOOL_REQUESTED = "tool.requested"
@@ -66,6 +70,10 @@ class EventType(str, Enum):
     # Recovery & Errors
     RETRY_TRIGGERED = "recovery.retry"
     RECOVERY_ATTEMPTED = "recovery.attempted"
+    TASK_RETRY = "task.retry"
+    TASK_RECOVERY_STARTED = "task.recovery_started"
+    TASK_RECOVERY_COMPLETED = "task.recovery_completed"
+    TASK_REPLAN = "task.replan"
     ERROR_OCCURRED = "error.occurred"
 
     # Credential Vault

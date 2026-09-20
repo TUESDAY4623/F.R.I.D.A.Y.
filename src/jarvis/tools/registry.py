@@ -64,4 +64,7 @@ def get_tool_registry() -> ToolRegistry:
     global _default_registry
     if _default_registry is None:
         _default_registry = ToolRegistry()
+        from jarvis.bootstrap import register_default_tools
+
+        register_default_tools(_default_registry)
     return _default_registry
