@@ -56,4 +56,4 @@ jobs:
         run: uv sync
 
       - name: Run UI tests
-        run: uv run pytest -v tests/test_ui.py tests/test_phase2_ui.py
+        run: uv run pytest -v tests/test_ui.py tests/test_phase2_ui.py tests/test_phase1_resolution.py
