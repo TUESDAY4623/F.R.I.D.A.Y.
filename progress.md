@@ -13,6 +13,13 @@ Rules: Append-only, new entries added at the top (most recent first). Never edit
 **Sign-off: PASS — 81 TESTS PASSING (0 REGRESSIONS)**
 
 ---
+## 2026-09-24 — Phase 2 (Tanmay)
+
+- what was built/changed: Implemented the Approval Manager UI for HIGH-risk actions with clear action details, target, consequences, reversibility, and approval reason, along with Approve/Deny/Cancel controls. Added visible retry/recovery status indicators for retrying, replanning, and giving up states.
+
+- what was tested and the result: Extended the UI test coverage for approval blocking/decision flows and retry/recovery states, including induced failure scenarios while keeping the existing Phase 1 test suite passing.
+
+- what's still open or blocking the next person: Phase 3 desktop UI automation observability, including the agent activity overlay and targeted UI-element logging, remains for the next phase.
 
 ## 2026-09-20 — Phase 1 Final Verification & Phase 2 Sujeet Core Completion
 
@@ -190,11 +197,3 @@ Rules: Append-only, new entries added at the top (most recent first). Never edit
 - what was tested and the result: Ran `main.py` Hello Loop (11/11 canonical steps logged in exact order, 16 streamed events captured, probe tool registered and executed); ran automated test suite via pytest with 10 passed, 0 failed across `test_tool_registry.py`, `test_event_logger.py`, and `test_orchestrator_loop.py`.
 - what's still open or blocking the next person: Bare text I/O shell and live streaming log viewer pane (Tanmay) are still open; step-ordering test verification suite across all components is still open before Phase 0 exit sign-off.
 
-
-## 2026-09-24 — Phase 2 (Tanmay)
-
-- what was built/changed: Implemented the Approval Manager UI for HIGH-risk actions with clear action details, target, consequences, reversibility, and approval reason, along with Approve/Deny/Cancel controls. Added visible retry/recovery status indicators for retrying, replanning, and giving up states.
-
-- what was tested and the result: Extended the UI test coverage for approval blocking/decision flows and retry/recovery states, including induced failure scenarios while keeping the existing Phase 1 test suite passing.
-
-- what's still open or blocking the next person: Phase 3 desktop UI automation observability, including the agent activity overlay and targeted UI-element logging, remains for the next phase.
