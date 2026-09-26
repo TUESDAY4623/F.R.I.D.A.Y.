@@ -12,15 +12,18 @@ Phase 0 established the modular monolith foundation, Tool Registry contract, 11-
 ### Phase 1 Status: Completed
 Phase 1 established the functional execution core, Intent analysis, TaskGraph planning, 5 filesystem tools, risk-based policy checks, failure propagation, and PySide6 UI tool execution tree. (69 passing tests).
 
-### Phase 2 Status: In Progress (Sujeet Core Implementation Complete & Verified)
-Phase 2 implements core brain verification, failure handling, recovery, retry, replanning, and approval lifecycle:
-1. **5-Category Failure Classification**: `RETRYABLE`, `RECOVERABLE`, `REPLAN_REQUIRED`, `USER_ACTION_REQUIRED`, `FATAL`.
+### Phase 2 Status: Completed (VERIFIED / READY FOR SIGN-OFF)
+Phase 2 implements core brain verification, failure handling, recovery, retry, replanning, approval lifecycle, and Phase 2 UI integration:
+1. **5-Category Failure Classification**: `RETRYABLE`, `RECOVERABLE`, `REPLAN_REQUIRED`, `USER_ACTION_REQUIRED`, `FATAL` classified by `RecoveryManager`.
 2. **Controlled Bounded Retries**: Automatic retries for transient failures bounded by `max_retries=3`, emitting `task.retry`.
 3. **Normal Pipeline Auto-Recovery**: Injecting compensatory steps (e.g. `create_directory` for missing parent/destination folders on `move_file` and `write_file`) into the task graph through `ToolManager.dispatch()`, emitting `task.recovery_started` and `task.recovery_completed`.
 4. **Replanning on Verification Failure**: `Planner.replan()` generates revised `TaskGraph` with incremented `version`, archiving previous plans into `TaskState.previous_plans`, emitting `task.replan`.
-5. **Approval Lifecycle**: Explicit lifecycle states (`NOT_REQUIRED`, `PENDING`, `APPROVED`, `DENIED`, `CANCELLED`, `EXPIRED`) with event emission (`task.approval_pending`, `task.approval_approved`, `task.approval_denied`).
+5. **Approval Lifecycle**: Explicit lifecycle states (`NOT_REQUIRED`, `PENDING`, `APPROVED`, `DENIED`, `CANCELLED`, `EXPIRED`) with modal `ApprovalDialog` and event emission (`task.approval_pending`, `task.approval_approved`, `task.approval_denied`, `task.cancelled`).
 6. **Step 1 Cancellation & Deadline Check**: Halts immediately on cancellation or deadline expiration with `task.cancelled` or `task.timeout`.
-7. **81 Passing Automated Tests**: 100% pass rate across 81 automated tests and zero Phase 0/1 regressions.
+7. **Phase 2 UI Integration**: Modal approval dialog (Approve/Deny/Cancel), interactive task controls (Pause/Resume/Cancel), metrics display (`Plan v1 | Retries: 0 | Recoveries: 0`), and live tool call tree.
+8. **ToolManager Execution Gateway Boundary**: Strict architecture boundary preserved; only ToolManager executes tools.
+9. **87 Passing Automated Tests**: 100% pass rate across 87 automated tests (69 Phase 1 regression tests + 12 Phase 2 recovery/approval tests + 6 Phase 2 UI tests) and zero regressions.
+10. **Manual GUI Verification Completed**: All 5 manual GUI scenarios verified (Normal Task, Missing-File Failure Propagation, Approval Workflow, Real Filesystem Auto-Recovery, Task Cancellation).
 
 ---
 
@@ -172,7 +175,7 @@ Phase 2 implements core brain verification, failure handling, recovery, retry, r
 
 #### `src/jarvis/tools/create_directory.py`
 - **Why Created**: Implements `CreateDirectoryTool` (`create_directory`).
-- **Usage**: LOW risk tool to create directories on the filesystem.
+- **Usage**: MEDIUM risk tool with rollback strategy (`remove_created_directory`) to create directories on the filesystem. Requires policy confirmation / human approval where applicable.
 
 #### `src/jarvis/tools/move_file.py`
 - **Why Created**: Implements `MoveFileTool` (`move_file`).
@@ -228,55 +231,55 @@ Phase 2 implements core brain verification, failure handling, recovery, retry, r
 
 To preserve strict module boundaries and prevent developers from absorbing other responsibilities, each component from the Section 4 Responsibility Table is implemented as an explicit stub module:
 
-1. **[`src/jarvis/state/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/state/__init__.py) (State Manager)**:
-   - *Owns*: Runtime truth (`task_id`, `lifecycle`, `plan_version`, `current_step`, `deadline`, `last_verified_state`).
+1. **[`src/jarvis/state/__init__.py`](src/jarvis/state/__init__.py) (State Manager)**:
+   - *Owns*: Runtime task truth (`task_id`, `lifecycle`, `plan_version`, `current_step`, `deadline`, `last_verified_state`, `retry_count`, `replan_count`, `recovery_attempts`, `previous_plans`).
    - *Usage*: Stores and updates task states; checked by Orchestrator for cancellation and deadlines.
-2. **[`src/jarvis/observation/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/observation/__init__.py) (Observation Manager)**:
+2. **[`src/jarvis/observation/__init__.py`](src/jarvis/observation/__init__.py) (Observation Manager)**:
    - *Owns*: Selecting and normalizing observation sources per surface.
    - *Usage*: Returns standardized `Observation` objects regardless of whether data came from UIA, DOM, or screenshots.
-3. **[`src/jarvis/verification/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/verification/__init__.py) (Verification Engine)**:
+3. **[`src/jarvis/verification/__init__.py`](src/jarvis/verification/__init__.py) (Verification Engine)**:
    - *Owns*: Comparing observed state to expected outcome.
    - *Usage*: Returns `VerificationResult` (`PASS`/`FAIL` + reason).
-4. **[`src/jarvis/policy/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/policy/__init__.py) (Policy Engine)**:
+4. **[`src/jarvis/policy/__init__.py`](src/jarvis/policy/__init__.py) (Policy Engine)**:
    - *Owns*: Evaluating risk tiers.
    - *Usage*: Returns `PolicyDecision.ALLOW`, `CONFIRM`, or `DENY` based on tool risk level. The Policy Engine satisfies the Phase 0 interface and ownership requirements and already contains risk-based implementation that was introduced ahead of the formal Phase 1 scope. This does not constitute Phase 1 completion.
-5. **[`src/jarvis/approval/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/approval/__init__.py) (Approval Manager)**:
+5. **[`src/jarvis/approval/__init__.py`](src/jarvis/approval/__init__.py) (Approval Manager)**:
    - *Owns*: Human-in-the-loop interaction (presenting what/target/consequences/reversibility/why).
-   - *Usage*: Auto-approves in Phase 0; will display modal in Phase 2.
-6. **[`src/jarvis/planner/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/planner/__init__.py) (Planner)**:
-   - *Owns*: Generating task graphs with expected outcomes per step.
+   - *Usage*: Auto-approves in Phase 0; displays modal `ApprovalDialog` in Phase 2.
+6. **[`src/jarvis/planner/__init__.py`](src/jarvis/planner/__init__.py) (Planner)**:
+   - *Owns*: Generating task graphs with expected outcomes per step and replanning on verification discrepancy (`replan()`).
    - *Usage*: Returns structured `TaskGraph` for the Orchestrator.
-7. **[`src/jarvis/recovery/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/recovery/__init__.py) (Error / Recovery Manager)**:
-   - *Owns*: Failure taxonomy, retry/replan budgets, backoff, and recovery actions.
+7. **[`src/jarvis/recovery/__init__.py`](src/jarvis/recovery/__init__.py) (Error / Recovery Manager)**:
+   - *Owns*: Failure taxonomy (5 categories), retry/replan budgets, backoff, and recovery actions.
    - *Usage*: Evaluates failed steps and determines recovery strategies.
-8. **[`src/jarvis/intent/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/intent/__init__.py) (Intent Manager)**:
+8. **[`src/jarvis/intent/__init__.py`](src/jarvis/intent/__init__.py) (Intent Manager)**:
    - *Owns*: Determining user intent and flagging ambiguity.
    - *Usage*: Returns `IntentResult` with parsed intent and entities.
-9. **[`src/jarvis/profiler/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/profiler/__init__.py) (Task Profiler)**:
+9. **[`src/jarvis/profiler/__init__.py`](src/jarvis/profiler/__init__.py) (Task Profiler)**:
    - *Owns*: Structured requirements profiling (complexity, risk, latency, privacy).
    - *Usage*: Returns `TaskProfile` object consumed by Planner and LLM Router.
-10. **[`src/jarvis/input_processor/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/input_processor/__init__.py) (Input Processor)**:
+10. **[`src/jarvis/input_processor/__init__.py`](src/jarvis/input_processor/__init__.py) (Input Processor)**:
     - *Owns*: STT, audio capture, text normalization, and capturing cancel signals.
     - *Usage*: Normalizes incoming user text or voice into `NormalizedInput`.
-11. **[`src/jarvis/memory/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/memory/__init__.py) (Memory Manager)**:
+11. **[`src/jarvis/memory/__init__.py`](src/jarvis/memory/__init__.py) (Memory Manager)**:
     - *Owns*: Session conversation turns (short-term) and user preferences (long-term).
     - *Usage*: Provides read/write access to memory slices.
-12. **[`src/jarvis/router/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/router/__init__.py) (LLM Router)**:
+12. **[`src/jarvis/router/__init__.py`](src/jarvis/router/__init__.py) (LLM Router)**:
     - *Owns*: Model tier selection (local vs cloud).
     - *Usage*: Selects model handle based on task profile and privacy requirements.
-13. **[`src/jarvis/resources/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/resources/__init__.py) (Resource Manager)**:
+13. **[`src/jarvis/resources/__init__.py`](src/jarvis/resources/__init__.py) (Resource Manager)**:
     - *Owns*: Monitoring RAM/CPU/GPU/NPU and computing real memory budget.
     - *Usage*: Vetoes model loads that would exceed available memory headroom.
-14. **[`src/jarvis/connectivity/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/connectivity/__init__.py) (Connectivity Manager)**:
+14. **[`src/jarvis/connectivity/__init__.py`](src/jarvis/connectivity/__init__.py) (Connectivity Manager)**:
     - *Owns*: Monitoring internet connectivity.
     - *Usage*: Provides connectivity status to trigger offline degradation.
-15. **[`src/jarvis/vault/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/vault/__init__.py) (Credential Vault)**:
+15. **[`src/jarvis/vault/__init__.py`](src/jarvis/vault/__init__.py) (Credential Vault)**:
     - *Owns*: Storing and retrieving credentials via Windows Credential Manager.
     - *Usage*: Injects credentials or returns opaque handles; never leaks raw secrets into context.
-16. **[`src/jarvis/context_budget/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/context_budget/__init__.py) (Context Budget Manager)**:
+16. **[`src/jarvis/context_budget/__init__.py`](src/jarvis/context_budget/__init__.py) (Context Budget Manager)**:
     - *Owns*: Token budget enforcement and prompt pruning.
     - *Usage*: Trims candidate context before prompts are sent to models.
-17. **[`src/jarvis/response/__init__.py`](file:///D:/jarvis-desktop-agent/src/jarvis/response/__init__.py) (Response Manager)**:
+17. **[`src/jarvis/response/__init__.py`](src/jarvis/response/__init__.py) (Response Manager)**:
     - *Owns*: Formatting agent results for UI and TTS audio rendering.
     - *Usage*: Prepares human-readable task response strings.
 
@@ -348,6 +351,14 @@ To preserve strict module boundaries and prevent developers from absorbing other
 - **Why Created**: Comprehensive regression test suite verifying resolution of all 7 Phase 1 blocking issues.
 - **Coverage**: Verifies `move_file` integration, regex parsing for directory creation and moves with spaces/quotes, `write to` syntax, schema harmonization, policy/approval gating, honest failure propagation, bootstrap registry, UI lifecycle event emission, and full end-to-end filesystem execution.
 
+#### `tests/test_phase2_recovery.py`
+- **Why Created**: Validates Phase 2 failure classification, bounded retry handling, real filesystem auto-recovery, replanning, approval lifecycle, and deadline/timeout enforcement.
+- **Coverage**: Verifies 5-category failure classification, retry on transient errors and budget exhaustion, auto-recovery for `move_file` and `write_file` missing parent dirs, replan versioning and plan archiving, approval states (approved, denied, cancelled), and deadline expiration halting at Step 1.
+
+#### `tests/test_phase2_ui.py`
+- **Why Created**: Validates Phase 2 desktop UI components and interaction workflows.
+- **Coverage**: Verifies `ApprovalDialog` modal initialization and decision buttons (`Approve`, `Deny`, `Cancel Task`), `MainWindow` approval callback bridge, and interactive task controls (`Pause`, `Resume`, `Cancel Task`).
+
 ---
 
 ## 4. How to Verify & Run
@@ -366,7 +377,7 @@ uv run python main.py
 uv run pytest -v
 ```
 **Expected Output**:
-- 69 passed, 0 failed across all test modules (1.30s execution time).
+- 87 passed, 0 failed across all test modules (~1.0s execution time).
 
 ---
 
@@ -456,7 +467,7 @@ Phase 1 elevates the Jarvis Desktop Agent from the verified Phase 0 skeleton int
    - `read_file` (`ReadFileTool`): LOW risk, read text files.
    - `write_file` (`WriteFileTool`): MEDIUM risk, write/overwrite text files.
    - `list_directory` (`ListDirectoryTool`): LOW risk, enumerate directory entries.
-   - `create_directory` (`CreateDirectoryTool`): LOW risk, create folders.
+   - `create_directory` (`CreateDirectoryTool`): MEDIUM risk, create folders with rollback strategy.
    - `move_file` (`MoveFileTool`): MEDIUM risk, move/rename files with rollback strategy.
    - All tools conform to the 11-field `ToolContract` with validated runtime invariants.
 
@@ -500,3 +511,62 @@ Phase 1 elevates the Jarvis Desktop Agent from the verified Phase 0 skeleton int
                           ▼
                   [ State Manager ] ──► [ Agent Result / Response ]
 ```
+
+---
+
+## 7. Phase 2 Status: Completed & Verified (Final Sign-Off)
+
+**Phase 0**: COMPLETED<br>
+**Phase 1**: COMPLETED<br>
+**Phase 2**: COMPLETED<br>
+**Sign-off**: PASS — ALL EXIT CRITERIA SATISFIED<br>
+**Date**: 2026-09-27<br>
+**Test Suite**: 87 passed, 0 failed via `uv run pytest -v`<br>
+
+### 7.1 Scope of Phase 2
+Phase 2 implements core brain verification, failure handling, recovery, retry, replanning, approval lifecycle, and Phase 2 UI integration:
+
+1. **5-Category Failure Classification**:
+   - `RecoveryManager.classify_failure()` categorizes all errors into `RETRYABLE`, `RECOVERABLE`, `REPLAN_REQUIRED`, `USER_ACTION_REQUIRED`, or `FATAL`.
+   - Recorded in `StateManager.record_failure()`.
+2. **Bounded Retries**:
+   - Transient failures (e.g. timeouts, file locks) trigger `RecoveryStrategy.RETRY` up to `max_retries=3`.
+   - Tracked via `StateManager.increment_retry()` and logged as `task.retry`.
+   - Budget exhaustion terminates execution cleanly with `LoopStatus.FAILED` / `TaskLifecycle.FAILED`.
+3. **Automatic Recovery via Normal Pipeline**:
+   - Missing parent/destination directories on `move_file` and `write_file` are classified as `RECOVERABLE`.
+   - Compensatory `create_directory` step generated by `RecoveryManager.create_recovery_plan()` is injected into the active `TaskGraph`.
+   - Dispatched strictly through the standard `ToolManager.dispatch()` execution gateway.
+   - Bounded by `max_recovery_attempts=2`. Emits `task.recovery_started` and `task.recovery_completed`.
+4. **Replanning on Verification Failure**:
+   - When verification fails or discrepancies arise, `Planner.replan()` generates an incremented plan version (`TaskGraph.version + 1`).
+   - Prior plans are archived in `TaskState.previous_plans`.
+   - Bounded by `max_replans=2`, logged as `task.replan`.
+5. **Approval Lifecycle**:
+   - Explicit lifecycle states: `NOT_REQUIRED`, `PENDING`, `APPROVED`, `DENIED`, `CANCELLED`, `EXPIRED`.
+   - Policy `CONFIRM` triggers modal `ApprovalDialog` displaying action details, target, consequences, reversibility, and reason.
+   - Approved actions execute; denied actions do not execute; cancelled actions halt the entire task.
+   - Emits `task.approval_pending`, `task.approval_approved`, `task.approval_denied`, `task.cancelled`.
+6. **Cancellation & Deadline Timeout**:
+   - Step 1 checks `is_cancelled` and `is_deadline_exceeded` in `StateManager`.
+   - Cancellation halts immediately with `TaskLifecycle.CANCELLED` and `task.cancelled`.
+   - Expired deadlines halt immediately with `TaskLifecycle.FAILED` and `task.timeout`.
+7. **Honest Failure Propagation**:
+   - Missing file reads and unrecoverable errors transition to `FAILED` and emit `task.failed` without false completions.
+8. **11-Step Canonical Loop Preserved**:
+   - The exact 11-step execution sequence is preserved across all cycles.
+9. **Tool Execution Isolation**:
+   - `ToolManager` remains the sole tool execution gateway; no other component directly invokes tools.
+10. **Phase 2 UI Integration**:
+    - Modal `ApprovalDialog` with Approve/Deny/Cancel controls.
+    - Interactive task controls (Pause/Resume/Cancel).
+    - Task state status badge, plan version / retry / recovery metrics line, and live collapsible tool call tree.
+
+### 7.2 Manual GUI Verification Summary
+All 5 manual GUI test scenarios have been executed and verified against `MainWindow`:
+
+- **TEST 1 (Normal GUI Task)**: `list directory .` → SUCCESS, status badge `LOOP_COMPLETED`, tool status `SUCCESS` in tree.
+- **TEST 2 (Failure Propagation)**: `read file this_file_does_not_exist_at_all.txt` → Tool FAILED, Success: False, Status: failed, tool status `FAILED` in tree, `task.failed` logged.
+- **TEST 3 (Approval Workflow)**: `create directory test_approval_folder` → Policy `CONFIRM` triggers `ApprovalDialog`. Approve creates folder and completes; Deny blocks execution and transitions to `FAILED`.
+- **TEST 4 (Recovery Workflow)**: `write "testing recovery" to my_temp_source.txt` followed by `move file my_temp_source.txt to non_existent_subfolder/moved_file.txt` → initial move_file failure classified as `RECOVERABLE`, `create_directory` executed, `move_file` retried successfully, `task.recovery_completed` emitted, final task completed.
+- **TEST 5 (Task Cancellation)**: Trigger Cancel Task during approval dialog → task cancelled immediately, status badge updates to `CANCELLED`.

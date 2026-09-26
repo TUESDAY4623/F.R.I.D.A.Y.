@@ -9,10 +9,38 @@ Rules: Append-only, new entries added at the top (most recent first). Never edit
 
 **Phase 0: COMPLETED**
 **Phase 1: COMPLETED**
-**Phase 2: IN PROGRESS (Sujeet Core Implementation Complete & Verified)**
-**Sign-off: PASS — 81 TESTS PASSING (0 REGRESSIONS)**
+**Phase 2: COMPLETED (VERIFIED / READY FOR SIGN-OFF)**
+**Sign-off: PASS — 87 TESTS PASSING (0 REGRESSIONS)**
 
 ---
+
+## 2026-09-27 — Phase 2 Final Sign-Off & Verification (All Contributors)
+
+- **Status**: COMPLETED
+- **Sign-off**: PASS — PHASE 2 VERIFIED / READY FOR SIGN-OFF (87 TESTS PASSING, 0 REGRESSIONS)
+- **Summary**: Completed final verification and audit for Phase 2 across core brain, failure recovery, approval lifecycle, and UI components. All 87 automated tests pass with 0 regressions.
+- **Requirements Verified**:
+  - **Failure Classification**: 5 canonical categories (`RETRYABLE`, `RECOVERABLE`, `REPLAN_REQUIRED`, `USER_ACTION_REQUIRED`, `FATAL`) classified by `RecoveryManager`.
+  - **Bounded Retry**: Transient failures retried with backoff up to `max_retries=3`, budget exhaustion transitions cleanly to `FAILED`.
+  - **Automatic Recovery**: Missing parent/destination directories on `move_file` and `write_file` auto-recovered by injecting `create_directory` into `ToolManager` pipeline. Bounded by `max_recovery_attempts=2`.
+  - **Replanning**: Verification failures trigger `Planner.replan()`, incrementing `plan_version`, archiving previous plans into `TaskState.previous_plans`. Bounded by `max_replans=2`.
+  - **Approval Lifecycle**: `NOT_REQUIRED`, `PENDING`, `APPROVED`, `DENIED`, `CANCELLED`, `EXPIRED`. Policy `CONFIRM` triggers modal `ApprovalDialog`; decisions routed cleanly through `ToolManager`.
+  - **Cancellation**: Task cancellation checked at Step 1 and Step 11; stops execution immediately, lifecycle transitions to `CANCELLED`.
+  - **Deadline / Timeout**: Expired deadlines halt execution at Step 1, emitting `task.timeout`.
+  - **Honest Failure Propagation**: Missing file reads and tool errors transition to `FAILED` and emit `task.failed` without false completions.
+  - **11-Step Canonical Loop**: Exact 11-step execution sequence preserved across all cycles.
+  - **Architecture Boundaries**: `ToolManager` remains the sole execution gateway; Orchestrator, Planner, RecoveryManager, and UI do not directly execute tools.
+  - **Phase 2 UI**: Modal `ApprovalDialog` (Approve/Deny/Cancel), interactive task controls (Pause/Resume/Cancel), metrics display (`Plan v1 | Retries: 0 | Recoveries: 0`), and live tool call tree.
+- **Manual GUI Verification Completed**:
+  - **TEST 1 (Normal GUI Task)**: `list directory .` → SUCCESS, status `LOOP_COMPLETED`, tool status `SUCCESS` in tree.
+  - **TEST 2 (Failure Propagation)**: `read file this_file_does_not_exist_at_all.txt` → Tool FAILED, Success: False, Status: failed, tool status `FAILED` in tree, `task.failed` logged.
+  - **TEST 3 (Approval Workflow)**: `create directory test_approval_folder` → Policy `CONFIRM` triggers `ApprovalDialog`. Approve creates folder and completes; Deny blocks execution and transitions to `FAILED`.
+  - **TEST 4 (Recovery Workflow)**: `write "testing recovery" to my_temp_source.txt` followed by `move file my_temp_source.txt to non_existent_subfolder/moved_file.txt` → initial move_file failure classified as `RECOVERABLE`, `create_directory` executed, `move_file` retried successfully, `task.recovery_completed` emitted, final task completed.
+  - **TEST 5 (Task Cancellation)**: Trigger Cancel Task during approval dialog → task cancelled immediately, status transitions to `CANCELLED`.
+- **What's still open or blocking the next person**: Phase 2 is complete and signed off. Phase 3 (Desktop UI automation, UIA/DOM visual elements, OCR/vision grounding) can begin.
+
+---
+
 ## 2026-09-24 — Phase 2 (Tanmay)
 
 - what was built/changed: Implemented the Approval Manager UI for HIGH-risk actions with clear action details, target, consequences, reversibility, and approval reason, along with Approve/Deny/Cancel controls. Added visible retry/recovery status indicators for retrying, replanning, and giving up states.
