@@ -1,25 +1,32 @@
-# Python
+# Python-generated files
 __pycache__/
-*.pyc
-*.pyo
-.pytest_cache/
-*.egg-info/
-dist/
+*.py[cod]
 build/
-.eggs/
+dist/
+wheels/
+*.egg-info
 
 # Virtual environments
+.venv
 venv/
-.env
-.venv/
 
-# IDE
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Test / coverage caches
+.pytest_cache/
+htmlcov/
+.coverage
+
+# IDE directories
 .vscode/
 .idea/
 
-# OS
-Thumbs.db
-.DS_Store
+# Log files
+*.log
 
-# Generated schemas (committed, but ignore local edits)
-# schemas/*.json
+# OS artifacts
+.DS_Store
+Thumbs.db
