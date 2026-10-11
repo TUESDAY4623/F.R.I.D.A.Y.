@@ -1,0 +1,18 @@
+{
+  "type": "string",
+  "enum": [
+    "file_path",
+    "app_name",
+    "url",
+    "person",
+    "email",
+    "date",
+    "time",
+    "location",
+    "number",
+    "organization",
+    "product",
+    "command"
+  ],
+  "description": "Types of entities that can be extracted from user requests."
+}

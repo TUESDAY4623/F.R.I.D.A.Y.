@@ -1,0 +1,58 @@
+{
+  "$defs": {
+    "EntityType": {
+      "description": "Types of entities that can be extracted from user requests.",
+      "enum": [
+        "file_path",
+        "app_name",
+        "url",
+        "person",
+        "email",
+        "date",
+        "time",
+        "location",
+        "number",
+        "organization",
+        "product",
+        "command"
+      ],
+      "title": "EntityType",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "An entity extracted from the user's request by Laya.",
+  "properties": {
+    "type": {
+      "$ref": "#/$defs/EntityType",
+      "description": "The type of entity (e.g., file_path, app_name, url)."
+    },
+    "value": {
+      "description": "The extracted entity value.",
+      "minLength": 1,
+      "title": "Value",
+      "type": "string"
+    },
+    "confidence": {
+      "description": "Confidence score for this extraction (0.0–1.0).",
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Confidence",
+      "type": "number"
+    },
+    "context": {
+      "description": "Surrounding context from the request where the entity was found.",
+      "minLength": 1,
+      "title": "Context",
+      "type": "string"
+    }
+  },
+  "required": [
+    "type",
+    "value",
+    "confidence",
+    "context"
+  ],
+  "title": "ExtractedEntity",
+  "type": "object"
+}

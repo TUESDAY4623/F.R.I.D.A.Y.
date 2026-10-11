@@ -1,0 +1,10 @@
+{
+  "type": "string",
+  "enum": [
+    "informational",
+    "actionable",
+    "query",
+    "command"
+  ],
+  "description": "Semantic intent categories identified by Laya."
+}

@@ -1,0 +1,134 @@
+{
+  "$defs": {
+    "EntityType": {
+      "description": "Types of entities that can be extracted from user requests.",
+      "enum": [
+        "file_path",
+        "app_name",
+        "url",
+        "person",
+        "email",
+        "date",
+        "time",
+        "location",
+        "number",
+        "organization",
+        "product",
+        "command"
+      ],
+      "title": "EntityType",
+      "type": "string"
+    },
+    "ExtractedEntity": {
+      "additionalProperties": false,
+      "description": "An entity extracted from the user's request by Laya.",
+      "properties": {
+        "type": {
+          "$ref": "#/$defs/EntityType",
+          "description": "The type of entity (e.g., file_path, app_name, url)."
+        },
+        "value": {
+          "description": "The extracted entity value.",
+          "minLength": 1,
+          "title": "Value",
+          "type": "string"
+        },
+        "confidence": {
+          "description": "Confidence score for this extraction (0.0–1.0).",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "context": {
+          "description": "Surrounding context from the request where the entity was found.",
+          "minLength": 1,
+          "title": "Context",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "value",
+        "confidence",
+        "context"
+      ],
+      "title": "ExtractedEntity",
+      "type": "object"
+    },
+    "LayaCategory": {
+      "description": "Semantic intent categories identified by Laya.",
+      "enum": [
+        "informational",
+        "actionable",
+        "query",
+        "command"
+      ],
+      "title": "LayaCategory",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Validated, canonical intent produced by the Intent Manager.\n\nThe Intent Manager takes Laya's raw classification and produces a\nvalidated, canonical intent representation. The Intent does NOT\nindependently classify the request — it normalizes and enriches\nLaya's classification.",
+  "properties": {
+    "request_id": {
+      "description": "Links back to the originating Request.",
+      "minLength": 1,
+      "title": "Request Id",
+      "type": "string"
+    },
+    "laya_category": {
+      "$ref": "#/$defs/LayaCategory",
+      "description": "Laya's raw category (preserved from LayaClassification)."
+    },
+    "normalized_form": {
+      "description": "Canonical representation of the intent.",
+      "minLength": 1,
+      "title": "Normalized Form",
+      "type": "string"
+    },
+    "entities": {
+      "description": "Validated and enriched entities (from LayaClassification).",
+      "items": {
+        "$ref": "#/$defs/ExtractedEntity"
+      },
+      "title": "Entities",
+      "type": "array"
+    },
+    "constraints": {
+      "description": "Identified constraints (refined from LayaClassification.characteristics).",
+      "items": {
+        "type": "string"
+      },
+      "title": "Constraints",
+      "type": "array"
+    },
+    "confidence": {
+      "description": "Intent Manager's confidence in the normalized form (0.0–1.0).",
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Confidence",
+      "type": "number"
+    },
+    "ambiguous": {
+      "description": "Whether the intent remains ambiguous after normalization.",
+      "title": "Ambiguous",
+      "type": "boolean"
+    },
+    "metadata": {
+      "additionalProperties": true,
+      "description": "Additional context from Intent Manager.",
+      "title": "Metadata",
+      "type": "object"
+    }
+  },
+  "required": [
+    "request_id",
+    "laya_category",
+    "normalized_form",
+    "confidence",
+    "ambiguous"
+  ],
+  "title": "Intent",
+  "type": "object"
+}

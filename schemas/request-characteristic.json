@@ -1,0 +1,13 @@
+{
+  "type": "string",
+  "enum": [
+    "multi-step",
+    "external-data",
+    "requires-confirmation",
+    "read-only",
+    "destructive",
+    "time-sensitive",
+    "ambiguous"
+  ],
+  "description": "Characteristics of a user request identified by Laya."
+}

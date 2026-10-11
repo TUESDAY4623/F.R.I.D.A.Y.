@@ -1,0 +1,43 @@
+{
+  "additionalProperties": false,
+  "description": "Structured output of the Input Processor.\n\nThis is the first structured representation of the user's request\nin the Jarvis pipeline. It is passed to Laya for classification.",
+  "properties": {
+    "id": {
+      "description": "Unique identifier for this request.",
+      "minLength": 1,
+      "title": "Id",
+      "type": "string"
+    },
+    "raw_input": {
+      "description": "Original user input text, unmodified.",
+      "minLength": 1,
+      "title": "Raw Input",
+      "type": "string"
+    },
+    "normalized_input": {
+      "description": "Cleaned/normalized version of the raw input.",
+      "minLength": 1,
+      "title": "Normalized Input",
+      "type": "string"
+    },
+    "timestamp": {
+      "description": "When the request was created.",
+      "format": "date-time",
+      "title": "Timestamp",
+      "type": "string"
+    },
+    "metadata": {
+      "additionalProperties": true,
+      "description": "Optional metadata for future extensibility.",
+      "title": "Metadata",
+      "type": "object"
+    }
+  },
+  "required": [
+    "id",
+    "raw_input",
+    "normalized_input"
+  ],
+  "title": "Request",
+  "type": "object"
+}

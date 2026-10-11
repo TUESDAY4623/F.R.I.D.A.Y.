@@ -1,0 +1,154 @@
+{
+  "$defs": {
+    "EntityType": {
+      "description": "Types of entities that can be extracted from user requests.",
+      "enum": [
+        "file_path",
+        "app_name",
+        "url",
+        "person",
+        "email",
+        "date",
+        "time",
+        "location",
+        "number",
+        "organization",
+        "product",
+        "command"
+      ],
+      "title": "EntityType",
+      "type": "string"
+    },
+    "ExtractedEntity": {
+      "additionalProperties": false,
+      "description": "An entity extracted from the user's request by Laya.",
+      "properties": {
+        "type": {
+          "$ref": "#/$defs/EntityType",
+          "description": "The type of entity (e.g., file_path, app_name, url)."
+        },
+        "value": {
+          "description": "The extracted entity value.",
+          "minLength": 1,
+          "title": "Value",
+          "type": "string"
+        },
+        "confidence": {
+          "description": "Confidence score for this extraction (0.0–1.0).",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "context": {
+          "description": "Surrounding context from the request where the entity was found.",
+          "minLength": 1,
+          "title": "Context",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "value",
+        "confidence",
+        "context"
+      ],
+      "title": "ExtractedEntity",
+      "type": "object"
+    },
+    "LayaCategory": {
+      "description": "Semantic intent categories identified by Laya.",
+      "enum": [
+        "informational",
+        "actionable",
+        "query",
+        "command"
+      ],
+      "title": "LayaCategory",
+      "type": "string"
+    },
+    "RequestCharacteristic": {
+      "description": "Characteristics of a user request identified by Laya.",
+      "enum": [
+        "multi-step",
+        "external-data",
+        "requires-confirmation",
+        "read-only",
+        "destructive",
+        "time-sensitive",
+        "ambiguous"
+      ],
+      "title": "RequestCharacteristic",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Raw semantic classification produced by Laya.\n\nLaya classifies the user's request semantically: intent category,\nentity extraction, confidence, and ambiguity detection.\nTask complexity is NOT assessed here — that belongs to TaskProfile.",
+  "properties": {
+    "request_id": {
+      "description": "Links back to the originating Request.",
+      "minLength": 1,
+      "title": "Request Id",
+      "type": "string"
+    },
+    "category": {
+      "$ref": "#/$defs/LayaCategory",
+      "description": "Semantic intent category (e.g., informational, actionable, query, command)."
+    },
+    "entities": {
+      "description": "Entities extracted from the request.",
+      "items": {
+        "$ref": "#/$defs/ExtractedEntity"
+      },
+      "title": "Entities",
+      "type": "array"
+    },
+    "characteristics": {
+      "description": "Identified request characteristics (e.g., multi-step, external-data).",
+      "items": {
+        "$ref": "#/$defs/RequestCharacteristic"
+      },
+      "title": "Characteristics",
+      "type": "array"
+    },
+    "confidence": {
+      "description": "Classification confidence score (0.0–1.0).",
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Confidence",
+      "type": "number"
+    },
+    "ambiguous": {
+      "description": "Whether the request is ambiguous.",
+      "title": "Ambiguous",
+      "type": "boolean"
+    },
+    "ambiguity_reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Why the request is ambiguous. Null if not ambiguous.",
+      "title": "Ambiguity Reason"
+    },
+    "metadata": {
+      "additionalProperties": true,
+      "description": "Additional classification details.",
+      "title": "Metadata",
+      "type": "object"
+    }
+  },
+  "required": [
+    "request_id",
+    "category",
+    "confidence",
+    "ambiguous"
+  ],
+  "title": "LayaClassification",
+  "type": "object"
+}

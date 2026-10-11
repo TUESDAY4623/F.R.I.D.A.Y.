@@ -1,0 +1,1 @@
+"""Jarvis contract models subpackage."""
