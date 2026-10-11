@@ -17,5 +17,5 @@ dev = [
 testpaths = ["tests"]
 pythonpath = ["src"]
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/jarvis"]
+[tool.pydantic-models]
+# Used by schema generation script

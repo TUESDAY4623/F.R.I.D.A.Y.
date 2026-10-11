@@ -1,32 +1,28 @@
-# Python-generated files
+# Python
 __pycache__/
-*.py[cod]
-build/
-dist/
-wheels/
-*.egg-info
-
-# Virtual environments
-.venv
+*.pyc
+*.pyo
+.venv/
 venv/
+env/
+*.egg-info/
+dist/
+build/
 
-# Environment files
-.env
-.env.*
-!.env.example
-
-# Test / coverage caches
-.pytest_cache/
-htmlcov/
-.coverage
-
-# IDE directories
+# IDE
 .vscode/
 .idea/
+*.swp
+*.swo
 
-# Log files
-*.log
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
 
-# OS artifacts
-.DS_Store
+# Lock files (re-generated per environment)
+uv.lock
+
+# OS
 Thumbs.db
+.DS_Store
