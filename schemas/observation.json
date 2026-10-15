@@ -1,0 +1,91 @@
+{
+  "$defs": {
+    "ErrorRecord": {
+      "additionalProperties": false,
+      "description": "A single recorded error. Stored in AgentState.errors (append-only).",
+      "properties": {
+        "code": {
+          "description": "Error code.",
+          "minLength": 1,
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "description": "Human-readable description of the error.",
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "recoverable": {
+          "description": "Whether retry/recovery is possible.",
+          "title": "Recoverable",
+          "type": "boolean"
+        },
+        "context": {
+          "additionalProperties": true,
+          "description": "Additional error context.",
+          "title": "Context",
+          "type": "object"
+        },
+        "timestamp": {
+          "description": "When the error occurred.",
+          "format": "date-time",
+          "title": "Timestamp",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "recoverable"
+      ],
+      "title": "ErrorRecord",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A result returned after executing an action or gathering information.",
+  "properties": {
+    "source": {
+      "description": "What produced this observation (tool, user, system).",
+      "minLength": 1,
+      "title": "Source",
+      "type": "string"
+    },
+    "data": {
+      "additionalProperties": true,
+      "description": "The observed data.",
+      "title": "Data",
+      "type": "object"
+    },
+    "success": {
+      "description": "Whether the action succeeded.",
+      "title": "Success",
+      "type": "boolean"
+    },
+    "error": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ErrorRecord"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Error details if the observation was not successful."
+    },
+    "timestamp": {
+      "description": "When the observation was recorded.",
+      "format": "date-time",
+      "title": "Timestamp",
+      "type": "string"
+    }
+  },
+  "required": [
+    "source",
+    "success"
+  ],
+  "title": "Observation",
+  "type": "object"
+}

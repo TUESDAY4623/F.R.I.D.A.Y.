@@ -1,0 +1,52 @@
+{
+  "additionalProperties": false,
+  "description": "Outcome of verifying an observation against an expected result.",
+  "properties": {
+    "passed": {
+      "description": "Whether verification succeeded.",
+      "title": "Passed",
+      "type": "boolean"
+    },
+    "expected": {
+      "additionalProperties": true,
+      "description": "What was expected.",
+      "title": "Expected",
+      "type": "object"
+    },
+    "actual": {
+      "additionalProperties": true,
+      "description": "What was observed.",
+      "title": "Actual",
+      "type": "object"
+    },
+    "discrepancy": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Human-readable description of the discrepancy if failed.",
+      "title": "Discrepancy"
+    },
+    "severity": {
+      "default": "none",
+      "description": "Severity of the verification outcome.",
+      "enum": [
+        "none",
+        "warning",
+        "error"
+      ],
+      "title": "Severity",
+      "type": "string"
+    }
+  },
+  "required": [
+    "passed"
+  ],
+  "title": "VerificationResult",
+  "type": "object"
+}

@@ -1,0 +1,1659 @@
+{
+  "$defs": {
+    "AskUserDecision": {
+      "additionalProperties": false,
+      "description": "Decision: request additional input or confirmation from the user.",
+      "properties": {
+        "id": {
+          "description": "Unique decision identifier.",
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "reasoning": {
+          "description": "LLM's reasoning for this decision.",
+          "minLength": 1,
+          "title": "Reasoning",
+          "type": "string"
+        },
+        "confidence": {
+          "description": "Decision confidence (0.0–1.0).",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "target_node_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Denormalized convenience copy per ADR 04; the corresponding decision parameter model's `target_node_id` is authoritative and must not be overridden by this field. No schema-level cross-field consistency rule is enforced.",
+          "title": "Target Node Id"
+        },
+        "retry_count": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Decision Engine's reasoning about the current retry attempt (1-indexed). AgentState.retry_count is authoritative — the Orchestrator must not trust this field over AgentState.retry_count.",
+          "title": "Retry Count"
+        },
+        "timestamp": {
+          "description": "When this decision was produced.",
+          "format": "date-time",
+          "title": "Timestamp",
+          "type": "string"
+        },
+        "type": {
+          "const": "ASK_USER",
+          "default": "ASK_USER",
+          "title": "Type",
+          "type": "string"
+        },
+        "parameters": {
+          "$ref": "#/$defs/AskUserParams"
+        }
+      },
+      "required": [
+        "id",
+        "reasoning",
+        "confidence",
+        "parameters"
+      ],
+      "title": "AskUserDecision",
+      "type": "object"
+    },
+    "AskUserParams": {
+      "additionalProperties": false,
+      "description": "Parameters for an ASK_USER decision.",
+      "properties": {
+        "question": {
+          "description": "The question or prompt for the user.",
+          "minLength": 1,
+          "title": "Question",
+          "type": "string"
+        },
+        "options": {
+          "description": "Predefined response options.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Options",
+          "type": "array"
+        },
+        "required": {
+          "default": true,
+          "description": "Whether a response is mandatory.",
+          "title": "Required",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "question"
+      ],
+      "title": "AskUserParams",
+      "type": "object"
+    },
+    "CompleteDecision": {
+      "additionalProperties": false,
+      "description": "Decision: signal successful task completion.",
+      "properties": {
+        "id": {
+          "description": "Unique decision identifier.",
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "reasoning": {
+          "description": "LLM's reasoning for this decision.",
+          "minLength": 1,
+          "title": "Reasoning",
+          "type": "string"
+        },
+        "confidence": {
+          "description": "Decision confidence (0.0–1.0).",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "target_node_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Denormalized convenience copy per ADR 04; the corresponding decision parameter model's `target_node_id` is authoritative and must not be overridden by this field. No schema-level cross-field consistency rule is enforced.",
+          "title": "Target Node Id"
+        },
+        "retry_count": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Decision Engine's reasoning about the current retry attempt (1-indexed). AgentState.retry_count is authoritative — the Orchestrator must not trust this field over AgentState.retry_count.",
+          "title": "Retry Count"
+        },
+        "timestamp": {
+          "description": "When this decision was produced.",
+          "format": "date-time",
+          "title": "Timestamp",
+          "type": "string"
+        },
+        "type": {
+          "const": "COMPLETE",
+          "default": "COMPLETE",
+          "title": "Type",
+          "type": "string"
+        },
+        "parameters": {
+          "$ref": "#/$defs/CompleteParams"
+        }
+      },
+      "required": [
+        "id",
+        "reasoning",
+        "confidence",
+        "parameters"
+      ],
+      "title": "CompleteDecision",
+      "type": "object"
+    },
+    "CompleteParams": {
+      "additionalProperties": false,
+      "description": "Parameters for a COMPLETE decision.",
+      "properties": {
+        "summary": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Description of the completed task.",
+          "title": "Summary"
+        },
+        "result": {
+          "additionalProperties": true,
+          "description": "Final result data.",
+          "title": "Result",
+          "type": "object"
+        }
+      },
+      "title": "CompleteParams",
+      "type": "object"
+    },
+    "Complexity": {
+      "description": "Task Profiler's assessment of task complexity.",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "title": "Complexity",
+      "type": "string"
+    },
+    "EdgeType": {
+      "description": "Type of dependency relationship between graph nodes.",
+      "enum": [
+        "sequence",
+        "condition",
+        "alternative"
+      ],
+      "title": "EdgeType",
+      "type": "string"
+    },
+    "EntityType": {
+      "description": "Types of entities that can be extracted from user requests.",
+      "enum": [
+        "file_path",
+        "app_name",
+        "url",
+        "person",
+        "email",
+        "date",
+        "time",
+        "location",
+        "number",
+        "organization",
+        "product",
+        "command"
+      ],
+      "title": "EntityType",
+      "type": "string"
+    },
+    "ErrorRecord": {
+      "additionalProperties": false,
+      "description": "A single recorded error. Stored in AgentState.errors (append-only).",
+      "properties": {
+        "code": {
+          "description": "Error code.",
+          "minLength": 1,
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "description": "Human-readable description of the error.",
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "recoverable": {
+          "description": "Whether retry/recovery is possible.",
+          "title": "Recoverable",
+          "type": "boolean"
+        },
+        "context": {
+          "additionalProperties": true,
+          "description": "Additional error context.",
+          "title": "Context",
+          "type": "object"
+        },
+        "timestamp": {
+          "description": "When the error occurred.",
+          "format": "date-time",
+          "title": "Timestamp",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "recoverable"
+      ],
+      "title": "ErrorRecord",
+      "type": "object"
+    },
+    "ExecuteDecision": {
+      "additionalProperties": false,
+      "description": "Decision: execute the next planned action in the Task Graph.",
+      "properties": {
+        "id": {
+          "description": "Unique decision identifier.",
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "reasoning": {
+          "description": "LLM's reasoning for this decision.",
+          "minLength": 1,
+          "title": "Reasoning",
+          "type": "string"
+        },
+        "confidence": {
+          "description": "Decision confidence (0.0–1.0).",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "target_node_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Denormalized convenience copy per ADR 04; the corresponding decision parameter model's `target_node_id` is authoritative and must not be overridden by this field. No schema-level cross-field consistency rule is enforced.",
+          "title": "Target Node Id"
+        },
+        "retry_count": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Decision Engine's reasoning about the current retry attempt (1-indexed). AgentState.retry_count is authoritative — the Orchestrator must not trust this field over AgentState.retry_count.",
+          "title": "Retry Count"
+        },
+        "timestamp": {
+          "description": "When this decision was produced.",
+          "format": "date-time",
+          "title": "Timestamp",
+          "type": "string"
+        },
+        "type": {
+          "const": "EXECUTE",
+          "default": "EXECUTE",
+          "title": "Type",
+          "type": "string"
+        },
+        "parameters": {
+          "$ref": "#/$defs/ExecuteParams"
+        }
+      },
+      "required": [
+        "id",
+        "reasoning",
+        "confidence",
+        "parameters"
+      ],
+      "title": "ExecuteDecision",
+      "type": "object"
+    },
+    "ExecuteParams": {
+      "additionalProperties": false,
+      "description": "Parameters for an EXECUTE decision.",
+      "properties": {
+        "target_node_id": {
+          "description": "The Task Graph node to execute.",
+          "minLength": 1,
+          "title": "Target Node Id",
+          "type": "string"
+        },
+        "tool_params": {
+          "additionalProperties": true,
+          "description": "Parameters to pass to the tool.",
+          "title": "Tool Params",
+          "type": "object"
+        }
+      },
+      "required": [
+        "target_node_id"
+      ],
+      "title": "ExecuteParams",
+      "type": "object"
+    },
+    "ExecutionStep": {
+      "additionalProperties": false,
+      "description": "A single recorded step of the execution history (append-only).\n\nNote: `decision` is typed as the Decision union to satisfy the ADR 04\ncontract. It is declared after the Decision models are defined below.",
+      "properties": {
+        "step_number": {
+          "description": "Sequential step number (1-indexed).",
+          "minimum": 1,
+          "title": "Step Number",
+          "type": "integer"
+        },
+        "node_id": {
+          "description": "Task Graph node that was executed.",
+          "minLength": 1,
+          "title": "Node Id",
+          "type": "string"
+        },
+        "decision": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExecuteDecision"
+            },
+            {
+              "$ref": "#/$defs/ObserveDecision"
+            },
+            {
+              "$ref": "#/$defs/ReplanDecision"
+            },
+            {
+              "$ref": "#/$defs/RetryDecision"
+            },
+            {
+              "$ref": "#/$defs/AskUserDecision"
+            },
+            {
+              "$ref": "#/$defs/WaitDecision"
+            },
+            {
+              "$ref": "#/$defs/CompleteDecision"
+            },
+            {
+              "$ref": "#/$defs/FailDecision"
+            }
+          ],
+          "description": "The Decision that triggered this step.",
+          "title": "Decision"
+        },
+        "action": {
+          "description": "What was done.",
+          "minLength": 1,
+          "title": "Action",
+          "type": "string"
+        },
+        "observation": {
+          "$ref": "#/$defs/Observation",
+          "description": "Result of the action."
+        },
+        "verification": {
+          "$ref": "#/$defs/VerificationResult",
+          "description": "Outcome of verification."
+        },
+        "timestamp": {
+          "description": "When this step occurred.",
+          "format": "date-time",
+          "title": "Timestamp",
+          "type": "string"
+        },
+        "duration_ms": {
+          "description": "How long the step took, in milliseconds.",
+          "minimum": 0,
+          "title": "Duration Ms",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "step_number",
+        "node_id",
+        "decision",
+        "action",
+        "observation",
+        "verification",
+        "duration_ms"
+      ],
+      "title": "ExecutionStep",
+      "type": "object"
+    },
+    "ExtractedEntity": {
+      "additionalProperties": false,
+      "description": "An entity extracted from the user's request by Laya.",
+      "properties": {
+        "type": {
+          "$ref": "#/$defs/EntityType",
+          "description": "The type of entity (e.g., file_path, app_name, url)."
+        },
+        "value": {
+          "description": "The extracted entity value.",
+          "minLength": 1,
+          "title": "Value",
+          "type": "string"
+        },
+        "confidence": {
+          "description": "Confidence score for this extraction (0.0–1.0).",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "context": {
+          "description": "Surrounding context from the request where the entity was found.",
+          "minLength": 1,
+          "title": "Context",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "value",
+        "confidence",
+        "context"
+      ],
+      "title": "ExtractedEntity",
+      "type": "object"
+    },
+    "FailDecision": {
+      "additionalProperties": false,
+      "description": "Decision: signal that the task cannot be completed.",
+      "properties": {
+        "id": {
+          "description": "Unique decision identifier.",
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "reasoning": {
+          "description": "LLM's reasoning for this decision.",
+          "minLength": 1,
+          "title": "Reasoning",
+          "type": "string"
+        },
+        "confidence": {
+          "description": "Decision confidence (0.0–1.0).",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "target_node_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Denormalized convenience copy per ADR 04; the corresponding decision parameter model's `target_node_id` is authoritative and must not be overridden by this field. No schema-level cross-field consistency rule is enforced.",
+          "title": "Target Node Id"
+        },
+        "retry_count": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Decision Engine's reasoning about the current retry attempt (1-indexed). AgentState.retry_count is authoritative — the Orchestrator must not trust this field over AgentState.retry_count.",
+          "title": "Retry Count"
+        },
+        "timestamp": {
+          "description": "When this decision was produced.",
+          "format": "date-time",
+          "title": "Timestamp",
+          "type": "string"
+        },
+        "type": {
+          "const": "FAIL",
+          "default": "FAIL",
+          "title": "Type",
+          "type": "string"
+        },
+        "parameters": {
+          "$ref": "#/$defs/FailParams"
+        }
+      },
+      "required": [
+        "id",
+        "reasoning",
+        "confidence",
+        "parameters"
+      ],
+      "title": "FailDecision",
+      "type": "object"
+    },
+    "FailParams": {
+      "additionalProperties": false,
+      "description": "Parameters for a FAIL decision.",
+      "properties": {
+        "reason": {
+          "description": "Why the task failed.",
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ErrorRecord"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "ErrorRecord describing the failure."
+        }
+      },
+      "required": [
+        "reason"
+      ],
+      "title": "FailParams",
+      "type": "object"
+    },
+    "Intent": {
+      "additionalProperties": false,
+      "description": "Validated, canonical intent produced by the Intent Manager.\n\nThe Intent Manager takes Laya's raw classification and produces a\nvalidated, canonical intent representation. The Intent does NOT\nindependently classify the request — it normalizes and enriches\nLaya's classification.",
+      "properties": {
+        "request_id": {
+          "description": "Links back to the originating Request.",
+          "minLength": 1,
+          "title": "Request Id",
+          "type": "string"
+        },
+        "laya_category": {
+          "$ref": "#/$defs/LayaCategory",
+          "description": "Laya's raw category (preserved from LayaClassification)."
+        },
+        "normalized_form": {
+          "description": "Canonical representation of the intent.",
+          "minLength": 1,
+          "title": "Normalized Form",
+          "type": "string"
+        },
+        "entities": {
+          "description": "Validated and enriched entities (from LayaClassification).",
+          "items": {
+            "$ref": "#/$defs/ExtractedEntity"
+          },
+          "title": "Entities",
+          "type": "array"
+        },
+        "constraints": {
+          "description": "Identified constraints (refined from LayaClassification.characteristics).",
+          "items": {
+            "type": "string"
+          },
+          "title": "Constraints",
+          "type": "array"
+        },
+        "confidence": {
+          "description": "Intent Manager's confidence in the normalized form (0.0–1.0).",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "ambiguous": {
+          "description": "Whether the intent remains ambiguous after normalization.",
+          "title": "Ambiguous",
+          "type": "boolean"
+        },
+        "metadata": {
+          "additionalProperties": true,
+          "description": "Additional context from Intent Manager.",
+          "title": "Metadata",
+          "type": "object"
+        }
+      },
+      "required": [
+        "request_id",
+        "laya_category",
+        "normalized_form",
+        "confidence",
+        "ambiguous"
+      ],
+      "title": "Intent",
+      "type": "object"
+    },
+    "LayaCategory": {
+      "description": "Semantic intent categories identified by Laya.",
+      "enum": [
+        "informational",
+        "actionable",
+        "query",
+        "command"
+      ],
+      "title": "LayaCategory",
+      "type": "string"
+    },
+    "LayaClassification": {
+      "additionalProperties": false,
+      "description": "Raw semantic classification produced by Laya.\n\nLaya classifies the user's request semantically: intent category,\nentity extraction, confidence, and ambiguity detection.\nTask complexity is NOT assessed here — that belongs to TaskProfile.",
+      "properties": {
+        "request_id": {
+          "description": "Links back to the originating Request.",
+          "minLength": 1,
+          "title": "Request Id",
+          "type": "string"
+        },
+        "category": {
+          "$ref": "#/$defs/LayaCategory",
+          "description": "Semantic intent category (e.g., informational, actionable, query, command)."
+        },
+        "entities": {
+          "description": "Entities extracted from the request.",
+          "items": {
+            "$ref": "#/$defs/ExtractedEntity"
+          },
+          "title": "Entities",
+          "type": "array"
+        },
+        "characteristics": {
+          "description": "Identified request characteristics (e.g., multi-step, external-data).",
+          "items": {
+            "$ref": "#/$defs/RequestCharacteristic"
+          },
+          "title": "Characteristics",
+          "type": "array"
+        },
+        "confidence": {
+          "description": "Classification confidence score (0.0–1.0).",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "ambiguous": {
+          "description": "Whether the request is ambiguous.",
+          "title": "Ambiguous",
+          "type": "boolean"
+        },
+        "ambiguity_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Why the request is ambiguous. Null if not ambiguous.",
+          "title": "Ambiguity Reason"
+        },
+        "metadata": {
+          "additionalProperties": true,
+          "description": "Additional classification details.",
+          "title": "Metadata",
+          "type": "object"
+        }
+      },
+      "required": [
+        "request_id",
+        "category",
+        "confidence",
+        "ambiguous"
+      ],
+      "title": "LayaClassification",
+      "type": "object"
+    },
+    "NodeStatus": {
+      "description": "Lifecycle status of a TaskGraph node.",
+      "enum": [
+        "pending",
+        "active",
+        "completed",
+        "failed",
+        "skipped",
+        "retrying"
+      ],
+      "title": "NodeStatus",
+      "type": "string"
+    },
+    "Observation": {
+      "additionalProperties": false,
+      "description": "A result returned after executing an action or gathering information.",
+      "properties": {
+        "source": {
+          "description": "What produced this observation (tool, user, system).",
+          "minLength": 1,
+          "title": "Source",
+          "type": "string"
+        },
+        "data": {
+          "additionalProperties": true,
+          "description": "The observed data.",
+          "title": "Data",
+          "type": "object"
+        },
+        "success": {
+          "description": "Whether the action succeeded.",
+          "title": "Success",
+          "type": "boolean"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ErrorRecord"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Error details if the observation was not successful."
+        },
+        "timestamp": {
+          "description": "When the observation was recorded.",
+          "format": "date-time",
+          "title": "Timestamp",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "success"
+      ],
+      "title": "Observation",
+      "type": "object"
+    },
+    "ObserveDecision": {
+      "additionalProperties": false,
+      "description": "Decision: gather additional information without executing a tool action.",
+      "properties": {
+        "id": {
+          "description": "Unique decision identifier.",
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "reasoning": {
+          "description": "LLM's reasoning for this decision.",
+          "minLength": 1,
+          "title": "Reasoning",
+          "type": "string"
+        },
+        "confidence": {
+          "description": "Decision confidence (0.0–1.0).",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "target_node_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Denormalized convenience copy per ADR 04; the corresponding decision parameter model's `target_node_id` is authoritative and must not be overridden by this field. No schema-level cross-field consistency rule is enforced.",
+          "title": "Target Node Id"
+        },
+        "retry_count": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Decision Engine's reasoning about the current retry attempt (1-indexed). AgentState.retry_count is authoritative — the Orchestrator must not trust this field over AgentState.retry_count.",
+          "title": "Retry Count"
+        },
+        "timestamp": {
+          "description": "When this decision was produced.",
+          "format": "date-time",
+          "title": "Timestamp",
+          "type": "string"
+        },
+        "type": {
+          "const": "OBSERVE",
+          "default": "OBSERVE",
+          "title": "Type",
+          "type": "string"
+        },
+        "parameters": {
+          "$ref": "#/$defs/ObserveParams"
+        }
+      },
+      "required": [
+        "id",
+        "reasoning",
+        "confidence",
+        "parameters"
+      ],
+      "title": "ObserveDecision",
+      "type": "object"
+    },
+    "ObserveParams": {
+      "additionalProperties": false,
+      "description": "Parameters for an OBSERVE decision.",
+      "properties": {
+        "observation_target": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What to observe.",
+          "title": "Observation Target"
+        },
+        "observation_params": {
+          "additionalProperties": true,
+          "description": "Parameters for the observation.",
+          "title": "Observation Params",
+          "type": "object"
+        }
+      },
+      "title": "ObserveParams",
+      "type": "object"
+    },
+    "ReplanDecision": {
+      "additionalProperties": false,
+      "description": "Decision: revise the Task Graph in response to changed circumstances.",
+      "properties": {
+        "id": {
+          "description": "Unique decision identifier.",
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "reasoning": {
+          "description": "LLM's reasoning for this decision.",
+          "minLength": 1,
+          "title": "Reasoning",
+          "type": "string"
+        },
+        "confidence": {
+          "description": "Decision confidence (0.0–1.0).",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "target_node_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Denormalized convenience copy per ADR 04; the corresponding decision parameter model's `target_node_id` is authoritative and must not be overridden by this field. No schema-level cross-field consistency rule is enforced.",
+          "title": "Target Node Id"
+        },
+        "retry_count": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Decision Engine's reasoning about the current retry attempt (1-indexed). AgentState.retry_count is authoritative — the Orchestrator must not trust this field over AgentState.retry_count.",
+          "title": "Retry Count"
+        },
+        "timestamp": {
+          "description": "When this decision was produced.",
+          "format": "date-time",
+          "title": "Timestamp",
+          "type": "string"
+        },
+        "type": {
+          "const": "REPLAN",
+          "default": "REPLAN",
+          "title": "Type",
+          "type": "string"
+        },
+        "parameters": {
+          "$ref": "#/$defs/ReplanParams"
+        }
+      },
+      "required": [
+        "id",
+        "reasoning",
+        "confidence",
+        "parameters"
+      ],
+      "title": "ReplanDecision",
+      "type": "object"
+    },
+    "ReplanParams": {
+      "additionalProperties": false,
+      "description": "Parameters for a REPLAN decision.",
+      "properties": {
+        "replan_reason": {
+          "description": "Why replanning is needed.",
+          "minLength": 1,
+          "title": "Replan Reason",
+          "type": "string"
+        },
+        "preserve_completed": {
+          "default": true,
+          "description": "Whether to keep completed nodes.",
+          "title": "Preserve Completed",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "replan_reason"
+      ],
+      "title": "ReplanParams",
+      "type": "object"
+    },
+    "Request": {
+      "additionalProperties": false,
+      "description": "Structured output of the Input Processor.\n\nThis is the first structured representation of the user's request\nin the Jarvis pipeline. It is passed to Laya for classification.",
+      "properties": {
+        "id": {
+          "description": "Unique identifier for this request.",
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "raw_input": {
+          "description": "Original user input text, unmodified.",
+          "minLength": 1,
+          "title": "Raw Input",
+          "type": "string"
+        },
+        "normalized_input": {
+          "description": "Cleaned/normalized version of the raw input.",
+          "minLength": 1,
+          "title": "Normalized Input",
+          "type": "string"
+        },
+        "timestamp": {
+          "description": "When the request was created.",
+          "format": "date-time",
+          "title": "Timestamp",
+          "type": "string"
+        },
+        "metadata": {
+          "additionalProperties": true,
+          "description": "Optional metadata for future extensibility.",
+          "title": "Metadata",
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "raw_input",
+        "normalized_input"
+      ],
+      "title": "Request",
+      "type": "object"
+    },
+    "RequestCharacteristic": {
+      "description": "Characteristics of a user request identified by Laya.",
+      "enum": [
+        "multi-step",
+        "external-data",
+        "requires-confirmation",
+        "read-only",
+        "destructive",
+        "time-sensitive",
+        "ambiguous"
+      ],
+      "title": "RequestCharacteristic",
+      "type": "string"
+    },
+    "RetryDecision": {
+      "additionalProperties": false,
+      "description": "Decision: repeat the last failed action.",
+      "properties": {
+        "id": {
+          "description": "Unique decision identifier.",
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "reasoning": {
+          "description": "LLM's reasoning for this decision.",
+          "minLength": 1,
+          "title": "Reasoning",
+          "type": "string"
+        },
+        "confidence": {
+          "description": "Decision confidence (0.0–1.0).",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "target_node_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Denormalized convenience copy per ADR 04; the corresponding decision parameter model's `target_node_id` is authoritative and must not be overridden by this field. No schema-level cross-field consistency rule is enforced.",
+          "title": "Target Node Id"
+        },
+        "retry_count": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Decision Engine's reasoning about the current retry attempt (1-indexed). AgentState.retry_count is authoritative — the Orchestrator must not trust this field over AgentState.retry_count.",
+          "title": "Retry Count"
+        },
+        "timestamp": {
+          "description": "When this decision was produced.",
+          "format": "date-time",
+          "title": "Timestamp",
+          "type": "string"
+        },
+        "type": {
+          "const": "RETRY",
+          "default": "RETRY",
+          "title": "Type",
+          "type": "string"
+        },
+        "parameters": {
+          "$ref": "#/$defs/RetryParams"
+        }
+      },
+      "required": [
+        "id",
+        "reasoning",
+        "confidence",
+        "parameters"
+      ],
+      "title": "RetryDecision",
+      "type": "object"
+    },
+    "RetryParams": {
+      "additionalProperties": false,
+      "description": "Parameters for a RETRY decision.",
+      "properties": {
+        "target_node_id": {
+          "description": "The node to retry.",
+          "minLength": 1,
+          "title": "Target Node Id",
+          "type": "string"
+        },
+        "adjusted_params": {
+          "additionalProperties": true,
+          "description": "Modified parameters for the retry.",
+          "title": "Adjusted Params",
+          "type": "object"
+        },
+        "retry_count": {
+          "description": "Current retry attempt number (1-indexed) — the Decision Engine's reasoning about the attempt. AgentState.retry_count is authoritative for enforcement.",
+          "minimum": 1,
+          "title": "Retry Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "target_node_id",
+        "retry_count"
+      ],
+      "title": "RetryParams",
+      "type": "object"
+    },
+    "TaskGraph": {
+      "additionalProperties": false,
+      "description": "Execution strategy constructed by the Planner.\n\nRepresents the Planner's proposed execution structure.\nIt does not contain live AgentState or decide how execution\nproceeds at runtime.",
+      "properties": {
+        "id": {
+          "description": "Unique identifier for this graph.",
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "nodes": {
+          "description": "Ordered list of steps in the task.",
+          "items": {
+            "$ref": "#/$defs/TaskGraphNode"
+          },
+          "title": "Nodes",
+          "type": "array"
+        },
+        "edges": {
+          "description": "Dependency relationships between nodes.",
+          "items": {
+            "$ref": "#/$defs/TaskGraphEdge"
+          },
+          "title": "Edges",
+          "type": "array"
+        },
+        "entry_node_id": {
+          "description": "ID of the first node to execute.",
+          "minLength": 1,
+          "title": "Entry Node Id",
+          "type": "string"
+        },
+        "metadata": {
+          "additionalProperties": true,
+          "description": "Graph-level metadata.",
+          "title": "Metadata",
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "entry_node_id"
+      ],
+      "title": "TaskGraph",
+      "type": "object"
+    },
+    "TaskGraphEdge": {
+      "additionalProperties": false,
+      "description": "A dependency relationship between two graph nodes.\n\nThe `from_` field references the source node ID. The `to` field\nreferences the target node ID. Edge type describes the relationship.\n\nThe Python attribute is `from_` because `from` is a reserved keyword.\nThe documented external contract name is `from`, which is enforced\nvia the alias. `populate_by_name=True` keeps `from_` accepted on\ninput for Python-side construction; `serialize_by_alias=True` makes\n`model_dump()` / `model_dump_json()` emit the documented `from` name\nby default so the output conforms to the generated JSON schema.",
+      "properties": {
+        "from": {
+          "description": "Source node ID.",
+          "minLength": 1,
+          "title": "From",
+          "type": "string"
+        },
+        "to": {
+          "description": "Target node ID.",
+          "minLength": 1,
+          "title": "To",
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/$defs/EdgeType",
+          "description": "Type of dependency: sequence, condition, or alternative."
+        }
+      },
+      "required": [
+        "from",
+        "to",
+        "type"
+      ],
+      "title": "TaskGraphEdge",
+      "type": "object"
+    },
+    "TaskGraphNode": {
+      "additionalProperties": false,
+      "description": "A single step in the task execution graph.\n\nRepresents a task objective using only documented fields.",
+      "properties": {
+        "id": {
+          "description": "Unique node identifier.",
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "description": "Action type (e.g., tool_call, observe, ask_user).",
+          "minLength": 1,
+          "title": "Type",
+          "type": "string"
+        },
+        "description": {
+          "description": "Human-readable description of this step.",
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "parameters": {
+          "additionalProperties": true,
+          "description": "Parameters for the action.",
+          "title": "Parameters",
+          "type": "object"
+        },
+        "expected_outcome": {
+          "description": "What success looks like.",
+          "minLength": 1,
+          "title": "Expected Outcome",
+          "type": "string"
+        },
+        "retry_limit": {
+          "default": 3,
+          "description": "Maximum retry attempts.",
+          "minimum": 0,
+          "title": "Retry Limit",
+          "type": "integer"
+        },
+        "status": {
+          "$ref": "#/$defs/NodeStatus",
+          "default": "pending",
+          "description": "Current lifecycle status of this node."
+        },
+        "result": {
+          "additionalProperties": true,
+          "description": "Execution result (populated after execution).",
+          "title": "Result",
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "description",
+        "expected_outcome"
+      ],
+      "title": "TaskGraphNode",
+      "type": "object"
+    },
+    "TaskProfile": {
+      "additionalProperties": false,
+      "description": "Output of the Task Profiler.\n\nTask complexity analysis lives here, not in LayaClassification.\nThis model describes what the task needs and how complex it is.\nIt does not contain execution steps, tool calls, graph nodes,\ngraph edges, agent decisions, or runtime state.",
+      "properties": {
+        "intent_id": {
+          "description": "Links back to the originating Intent.",
+          "minLength": 1,
+          "title": "Intent Id",
+          "type": "string"
+        },
+        "task_type": {
+          "$ref": "#/$defs/TaskType",
+          "description": "High-level task structure (e.g., single-step, multi-step, exploratory)."
+        },
+        "requirements": {
+          "description": "What the task needs (tools, data, etc.).",
+          "items": {
+            "type": "string"
+          },
+          "title": "Requirements",
+          "type": "array"
+        },
+        "constraints": {
+          "description": "Task-specific constraints.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Constraints",
+          "type": "array"
+        },
+        "complexity": {
+          "$ref": "#/$defs/Complexity"
+        },
+        "estimated_steps": {
+          "description": "Informational hint only. The Planner determines the actual step count.",
+          "exclusiveMinimum": 0,
+          "title": "Estimated Steps",
+          "type": "integer"
+        },
+        "prerequisites": {
+          "description": "Conditions that must be met before execution.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Prerequisites",
+          "type": "array"
+        },
+        "metadata": {
+          "additionalProperties": true,
+          "description": "Additional profiling details.",
+          "title": "Metadata",
+          "type": "object"
+        }
+      },
+      "required": [
+        "intent_id",
+        "task_type",
+        "complexity",
+        "estimated_steps"
+      ],
+      "title": "TaskProfile",
+      "type": "object"
+    },
+    "TaskStatus": {
+      "description": "Overall status of the task tracked by AgentState.",
+      "enum": [
+        "PENDING",
+        "OBSERVING",
+        "DECIDING",
+        "EXECUTING",
+        "VERIFYING",
+        "REPLANNING",
+        "AWAITING",
+        "COMPLETED",
+        "FAILED",
+        "CANCELLED"
+      ],
+      "title": "TaskStatus",
+      "type": "string"
+    },
+    "TaskType": {
+      "description": "High-level classification of task structure.",
+      "enum": [
+        "single-step",
+        "multi-step",
+        "exploratory"
+      ],
+      "title": "TaskType",
+      "type": "string"
+    },
+    "VerificationResult": {
+      "additionalProperties": false,
+      "description": "Outcome of verifying an observation against an expected result.",
+      "properties": {
+        "passed": {
+          "description": "Whether verification succeeded.",
+          "title": "Passed",
+          "type": "boolean"
+        },
+        "expected": {
+          "additionalProperties": true,
+          "description": "What was expected.",
+          "title": "Expected",
+          "type": "object"
+        },
+        "actual": {
+          "additionalProperties": true,
+          "description": "What was observed.",
+          "title": "Actual",
+          "type": "object"
+        },
+        "discrepancy": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Human-readable description of the discrepancy if failed.",
+          "title": "Discrepancy"
+        },
+        "severity": {
+          "default": "none",
+          "description": "Severity of the verification outcome.",
+          "enum": [
+            "none",
+            "warning",
+            "error"
+          ],
+          "title": "Severity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "passed"
+      ],
+      "title": "VerificationResult",
+      "type": "object"
+    },
+    "WaitDecision": {
+      "additionalProperties": false,
+      "description": "Decision: pause execution for an external condition.",
+      "properties": {
+        "id": {
+          "description": "Unique decision identifier.",
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "reasoning": {
+          "description": "LLM's reasoning for this decision.",
+          "minLength": 1,
+          "title": "Reasoning",
+          "type": "string"
+        },
+        "confidence": {
+          "description": "Decision confidence (0.0–1.0).",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "target_node_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Denormalized convenience copy per ADR 04; the corresponding decision parameter model's `target_node_id` is authoritative and must not be overridden by this field. No schema-level cross-field consistency rule is enforced.",
+          "title": "Target Node Id"
+        },
+        "retry_count": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Decision Engine's reasoning about the current retry attempt (1-indexed). AgentState.retry_count is authoritative — the Orchestrator must not trust this field over AgentState.retry_count.",
+          "title": "Retry Count"
+        },
+        "timestamp": {
+          "description": "When this decision was produced.",
+          "format": "date-time",
+          "title": "Timestamp",
+          "type": "string"
+        },
+        "type": {
+          "const": "WAIT",
+          "default": "WAIT",
+          "title": "Type",
+          "type": "string"
+        },
+        "parameters": {
+          "$ref": "#/$defs/WaitParams"
+        }
+      },
+      "required": [
+        "id",
+        "reasoning",
+        "confidence",
+        "parameters"
+      ],
+      "title": "WaitDecision",
+      "type": "object"
+    },
+    "WaitParams": {
+      "additionalProperties": false,
+      "description": "Parameters for a WAIT decision.",
+      "properties": {
+        "condition": {
+          "description": "Description of the condition to wait for.",
+          "minLength": 1,
+          "title": "Condition",
+          "type": "string"
+        },
+        "timeout_ms": {
+          "description": "Maximum wait duration in milliseconds.",
+          "exclusiveMinimum": 0,
+          "title": "Timeout Ms",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "condition",
+        "timeout_ms"
+      ],
+      "title": "WaitParams",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Runtime state of a single task execution.\n\nAgentState is transient — it exists only for the duration of a single task\nexecution and is never persisted. It is distinct from persistent memory.\n\nThis contract carries no runtime behavior: it does not execute tools,\nmake decisions, or enforce limits. The Agent Orchestrator owns all\nmutation and all limit enforcement.",
+  "properties": {
+    "request": {
+      "$ref": "#/$defs/Request",
+      "description": "The original request."
+    },
+    "intent": {
+      "$ref": "#/$defs/Intent",
+      "description": "The classified intent."
+    },
+    "laya_classification": {
+      "$ref": "#/$defs/LayaClassification",
+      "description": "Laya's classification."
+    },
+    "task_profile": {
+      "$ref": "#/$defs/TaskProfile",
+      "description": "Profiled task characteristics."
+    },
+    "task_graph": {
+      "$ref": "#/$defs/TaskGraph",
+      "description": "Current (possibly revised) task graph."
+    },
+    "execution_history": {
+      "description": "Record of all steps taken. Append-only (ADR 05).",
+      "items": {
+        "$ref": "#/$defs/ExecutionStep"
+      },
+      "title": "Execution History",
+      "type": "array"
+    },
+    "current_step_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "ID of the currently active node.",
+      "title": "Current Step Id"
+    },
+    "status": {
+      "$ref": "#/$defs/TaskStatus",
+      "default": "PENDING",
+      "description": "Overall task status."
+    },
+    "observations": {
+      "description": "Collected observations.",
+      "items": {
+        "$ref": "#/$defs/Observation"
+      },
+      "title": "Observations",
+      "type": "array"
+    },
+    "errors": {
+      "description": "Error history. Append-only (ADR 05, ADR 11).",
+      "items": {
+        "$ref": "#/$defs/ErrorRecord"
+      },
+      "title": "Errors",
+      "type": "array"
+    },
+    "retry_count": {
+      "default": 0,
+      "description": "Authoritative runtime retry counter for the current node. Incremented by the Agent Orchestrator only.",
+      "minimum": 0,
+      "title": "Retry Count",
+      "type": "integer"
+    },
+    "replan_count": {
+      "default": 0,
+      "description": "Number of REPLAN decisions issued for this task.",
+      "minimum": 0,
+      "title": "Replan Count",
+      "type": "integer"
+    },
+    "metadata": {
+      "additionalProperties": true,
+      "description": "Additional runtime data.",
+      "title": "Metadata",
+      "type": "object"
+    }
+  },
+  "required": [
+    "request",
+    "intent",
+    "laya_classification",
+    "task_profile",
+    "task_graph"
+  ],
+  "title": "AgentState",
+  "type": "object"
+}

@@ -1,0 +1,104 @@
+{
+  "$defs": {
+    "CompleteParams": {
+      "additionalProperties": false,
+      "description": "Parameters for a COMPLETE decision.",
+      "properties": {
+        "summary": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Description of the completed task.",
+          "title": "Summary"
+        },
+        "result": {
+          "additionalProperties": true,
+          "description": "Final result data.",
+          "title": "Result",
+          "type": "object"
+        }
+      },
+      "title": "CompleteParams",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Decision: signal successful task completion.",
+  "properties": {
+    "id": {
+      "description": "Unique decision identifier.",
+      "minLength": 1,
+      "title": "Id",
+      "type": "string"
+    },
+    "reasoning": {
+      "description": "LLM's reasoning for this decision.",
+      "minLength": 1,
+      "title": "Reasoning",
+      "type": "string"
+    },
+    "confidence": {
+      "description": "Decision confidence (0.0–1.0).",
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Confidence",
+      "type": "number"
+    },
+    "target_node_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Denormalized convenience copy per ADR 04; the corresponding decision parameter model's `target_node_id` is authoritative and must not be overridden by this field. No schema-level cross-field consistency rule is enforced.",
+      "title": "Target Node Id"
+    },
+    "retry_count": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Decision Engine's reasoning about the current retry attempt (1-indexed). AgentState.retry_count is authoritative — the Orchestrator must not trust this field over AgentState.retry_count.",
+      "title": "Retry Count"
+    },
+    "timestamp": {
+      "description": "When this decision was produced.",
+      "format": "date-time",
+      "title": "Timestamp",
+      "type": "string"
+    },
+    "type": {
+      "const": "COMPLETE",
+      "default": "COMPLETE",
+      "title": "Type",
+      "type": "string"
+    },
+    "parameters": {
+      "$ref": "#/$defs/CompleteParams"
+    }
+  },
+  "required": [
+    "id",
+    "reasoning",
+    "confidence",
+    "parameters"
+  ],
+  "title": "CompleteDecision",
+  "type": "object"
+}

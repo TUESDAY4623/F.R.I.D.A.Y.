@@ -1,0 +1,100 @@
+{
+  "$defs": {
+    "ExecuteParams": {
+      "additionalProperties": false,
+      "description": "Parameters for an EXECUTE decision.",
+      "properties": {
+        "target_node_id": {
+          "description": "The Task Graph node to execute.",
+          "minLength": 1,
+          "title": "Target Node Id",
+          "type": "string"
+        },
+        "tool_params": {
+          "additionalProperties": true,
+          "description": "Parameters to pass to the tool.",
+          "title": "Tool Params",
+          "type": "object"
+        }
+      },
+      "required": [
+        "target_node_id"
+      ],
+      "title": "ExecuteParams",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Decision: execute the next planned action in the Task Graph.",
+  "properties": {
+    "id": {
+      "description": "Unique decision identifier.",
+      "minLength": 1,
+      "title": "Id",
+      "type": "string"
+    },
+    "reasoning": {
+      "description": "LLM's reasoning for this decision.",
+      "minLength": 1,
+      "title": "Reasoning",
+      "type": "string"
+    },
+    "confidence": {
+      "description": "Decision confidence (0.0–1.0).",
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Confidence",
+      "type": "number"
+    },
+    "target_node_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Denormalized convenience copy per ADR 04; the corresponding decision parameter model's `target_node_id` is authoritative and must not be overridden by this field. No schema-level cross-field consistency rule is enforced.",
+      "title": "Target Node Id"
+    },
+    "retry_count": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Decision Engine's reasoning about the current retry attempt (1-indexed). AgentState.retry_count is authoritative — the Orchestrator must not trust this field over AgentState.retry_count.",
+      "title": "Retry Count"
+    },
+    "timestamp": {
+      "description": "When this decision was produced.",
+      "format": "date-time",
+      "title": "Timestamp",
+      "type": "string"
+    },
+    "type": {
+      "const": "EXECUTE",
+      "default": "EXECUTE",
+      "title": "Type",
+      "type": "string"
+    },
+    "parameters": {
+      "$ref": "#/$defs/ExecuteParams"
+    }
+  },
+  "required": [
+    "id",
+    "reasoning",
+    "confidence",
+    "parameters"
+  ],
+  "title": "ExecuteDecision",
+  "type": "object"
+}

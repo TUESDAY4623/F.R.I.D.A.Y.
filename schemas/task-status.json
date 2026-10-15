@@ -1,0 +1,16 @@
+{
+  "type": "string",
+  "enum": [
+    "PENDING",
+    "OBSERVING",
+    "DECIDING",
+    "EXECUTING",
+    "VERIFYING",
+    "REPLANNING",
+    "AWAITING",
+    "COMPLETED",
+    "FAILED",
+    "CANCELLED"
+  ],
+  "description": "Overall status of the task tracked by AgentState."
+}

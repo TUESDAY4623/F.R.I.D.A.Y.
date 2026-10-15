@@ -281,7 +281,7 @@ Decision
 ├── type: DecisionType        // One of eight types — determines required parameters
 ├── reasoning: string         // LLM's reasoning for this decision
 ├── parameters: object        // Decision-type-specific parameters (see discriminated union below)
-├── target_node_id: string    // For EXECUTE/RETRY: which Task Graph node
+├── target_node_id: string    // Denormalized convenience copy of the target node identifier. For EXECUTE and RETRY, the corresponding decision parameter model's target_node_id is authoritative; this top-level field must not override it. No schema-level cross-field consistency rule is currently enforced.
 ├── confidence: number        // 0.0–1.0
 ├── retry_count: number       // Decision Engine's reasoning about the current retry attempt (1-indexed). AgentState.retry_count is authoritative — the Orchestrator must not trust this field over AgentState.retry_count.
 └── timestamp: DateTime
