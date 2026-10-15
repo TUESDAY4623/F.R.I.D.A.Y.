@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 
 from jarvis.contracts.models.group_a import (
@@ -14,6 +13,16 @@ from jarvis.contracts.models.group_a import (
     LayaClassification,
     Request,
     RequestCharacteristic,
+)
+from jarvis.contracts.models.group_b import (
+    Complexity,
+    EdgeType,
+    NodeStatus,
+    TaskGraph,
+    TaskGraphEdge,
+    TaskGraphNode,
+    TaskProfile,
+    TaskType,
 )
 
 
@@ -36,10 +45,17 @@ def generate_all() -> None:
 
     generated = []
 
+    # Group A schemas
     generated.append(("request", write_schema(Request, "request.json")))
     generated.append(("extracted-entity", write_schema(ExtractedEntity, "extracted-entity.json")))
     generated.append(("laya-classification", write_schema(LayaClassification, "laya-classification.json")))
     generated.append(("intent", write_schema(Intent, "intent.json")))
+
+    # Group B schemas
+    generated.append(("task-profile", write_schema(TaskProfile, "task-profile.json")))
+    generated.append(("task-graph-node", write_schema(TaskGraphNode, "task-graph-node.json")))
+    generated.append(("task-graph-edge", write_schema(TaskGraphEdge, "task-graph-edge.json")))
+    generated.append(("task-graph", write_schema(TaskGraph, "task-graph.json")))
 
     # Enums as simple string schemas
     enum_dir = SCHEMA_DIR
@@ -47,6 +63,10 @@ def generate_all() -> None:
         ("entity-type", EntityType),
         ("request-characteristic", RequestCharacteristic),
         ("laya-category", LayaCategory),
+        ("task-type", TaskType),
+        ("complexity", Complexity),
+        ("node-status", NodeStatus),
+        ("edge-type", EdgeType),
     ]:
         enum_schema = {
             "type": "string",

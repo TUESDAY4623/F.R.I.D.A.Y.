@@ -14,8 +14,19 @@ from jarvis.contracts.models.group_a import (
     Request,
     RequestCharacteristic,
 )
+from jarvis.contracts.models.group_b import (
+    Complexity,
+    EdgeType,
+    NodeStatus,
+    TaskGraph,
+    TaskGraphEdge,
+    TaskGraphNode,
+    TaskProfile,
+    TaskType,
+)
 
 __all__ = [
+    # Group A
     "EntityType",
     "ExtractedEntity",
     "Intent",
@@ -23,4 +34,13 @@ __all__ = [
     "LayaClassification",
     "Request",
     "RequestCharacteristic",
+    # Group B
+    "Complexity",
+    "EdgeType",
+    "NodeStatus",
+    "TaskGraph",
+    "TaskGraphEdge",
+    "TaskGraphNode",
+    "TaskProfile",
+    "TaskType",
 ]
