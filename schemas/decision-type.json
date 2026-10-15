@@ -1,0 +1,14 @@
+{
+  "type": "string",
+  "enum": [
+    "EXECUTE",
+    "OBSERVE",
+    "REPLAN",
+    "RETRY",
+    "ASK_USER",
+    "WAIT",
+    "COMPLETE",
+    "FAIL"
+  ],
+  "description": "The eight decision types the Decision Engine may produce."
+}

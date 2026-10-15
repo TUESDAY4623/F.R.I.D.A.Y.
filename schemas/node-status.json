@@ -1,0 +1,12 @@
+{
+  "type": "string",
+  "enum": [
+    "pending",
+    "active",
+    "completed",
+    "failed",
+    "skipped",
+    "retrying"
+  ],
+  "description": "Lifecycle status of a TaskGraph node."
+}

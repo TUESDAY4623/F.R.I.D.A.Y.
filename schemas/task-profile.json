@@ -1,0 +1,85 @@
+{
+  "$defs": {
+    "Complexity": {
+      "description": "Task Profiler's assessment of task complexity.",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "title": "Complexity",
+      "type": "string"
+    },
+    "TaskType": {
+      "description": "High-level classification of task structure.",
+      "enum": [
+        "single-step",
+        "multi-step",
+        "exploratory"
+      ],
+      "title": "TaskType",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Output of the Task Profiler.\n\nTask complexity analysis lives here, not in LayaClassification.\nThis model describes what the task needs and how complex it is.\nIt does not contain execution steps, tool calls, graph nodes,\ngraph edges, agent decisions, or runtime state.",
+  "properties": {
+    "intent_id": {
+      "description": "Links back to the originating Intent.",
+      "minLength": 1,
+      "title": "Intent Id",
+      "type": "string"
+    },
+    "task_type": {
+      "$ref": "#/$defs/TaskType",
+      "description": "High-level task structure (e.g., single-step, multi-step, exploratory)."
+    },
+    "requirements": {
+      "description": "What the task needs (tools, data, etc.).",
+      "items": {
+        "type": "string"
+      },
+      "title": "Requirements",
+      "type": "array"
+    },
+    "constraints": {
+      "description": "Task-specific constraints.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Constraints",
+      "type": "array"
+    },
+    "complexity": {
+      "$ref": "#/$defs/Complexity"
+    },
+    "estimated_steps": {
+      "description": "Informational hint only. The Planner determines the actual step count.",
+      "exclusiveMinimum": 0,
+      "title": "Estimated Steps",
+      "type": "integer"
+    },
+    "prerequisites": {
+      "description": "Conditions that must be met before execution.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Prerequisites",
+      "type": "array"
+    },
+    "metadata": {
+      "additionalProperties": true,
+      "description": "Additional profiling details.",
+      "title": "Metadata",
+      "type": "object"
+    }
+  },
+  "required": [
+    "intent_id",
+    "task_type",
+    "complexity",
+    "estimated_steps"
+  ],
+  "title": "TaskProfile",
+  "type": "object"
+}

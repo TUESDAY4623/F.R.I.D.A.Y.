@@ -1,0 +1,30 @@
+{
+  "additionalProperties": false,
+  "description": "Parameters for a RETRY decision.",
+  "properties": {
+    "target_node_id": {
+      "description": "The node to retry.",
+      "minLength": 1,
+      "title": "Target Node Id",
+      "type": "string"
+    },
+    "adjusted_params": {
+      "additionalProperties": true,
+      "description": "Modified parameters for the retry.",
+      "title": "Adjusted Params",
+      "type": "object"
+    },
+    "retry_count": {
+      "description": "Current retry attempt number (1-indexed) — the Decision Engine's reasoning about the attempt. AgentState.retry_count is authoritative for enforcement.",
+      "minimum": 1,
+      "title": "Retry Count",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "target_node_id",
+    "retry_count"
+  ],
+  "title": "RetryParams",
+  "type": "object"
+}

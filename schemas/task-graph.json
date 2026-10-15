@@ -1,0 +1,162 @@
+{
+  "$defs": {
+    "EdgeType": {
+      "description": "Type of dependency relationship between graph nodes.",
+      "enum": [
+        "sequence",
+        "condition",
+        "alternative"
+      ],
+      "title": "EdgeType",
+      "type": "string"
+    },
+    "NodeStatus": {
+      "description": "Lifecycle status of a TaskGraph node.",
+      "enum": [
+        "pending",
+        "active",
+        "completed",
+        "failed",
+        "skipped",
+        "retrying"
+      ],
+      "title": "NodeStatus",
+      "type": "string"
+    },
+    "TaskGraphEdge": {
+      "additionalProperties": false,
+      "description": "A dependency relationship between two graph nodes.\n\nThe `from_` field references the source node ID. The `to` field\nreferences the target node ID. Edge type describes the relationship.\n\nThe Python attribute is `from_` because `from` is a reserved keyword.\nThe documented external contract name is `from`, which is enforced\nvia the alias. `populate_by_name=True` keeps `from_` accepted on\ninput for Python-side construction; `serialize_by_alias=True` makes\n`model_dump()` / `model_dump_json()` emit the documented `from` name\nby default so the output conforms to the generated JSON schema.",
+      "properties": {
+        "from": {
+          "description": "Source node ID.",
+          "minLength": 1,
+          "title": "From",
+          "type": "string"
+        },
+        "to": {
+          "description": "Target node ID.",
+          "minLength": 1,
+          "title": "To",
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/$defs/EdgeType",
+          "description": "Type of dependency: sequence, condition, or alternative."
+        }
+      },
+      "required": [
+        "from",
+        "to",
+        "type"
+      ],
+      "title": "TaskGraphEdge",
+      "type": "object"
+    },
+    "TaskGraphNode": {
+      "additionalProperties": false,
+      "description": "A single step in the task execution graph.\n\nRepresents a task objective using only documented fields.",
+      "properties": {
+        "id": {
+          "description": "Unique node identifier.",
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "description": "Action type (e.g., tool_call, observe, ask_user).",
+          "minLength": 1,
+          "title": "Type",
+          "type": "string"
+        },
+        "description": {
+          "description": "Human-readable description of this step.",
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "parameters": {
+          "additionalProperties": true,
+          "description": "Parameters for the action.",
+          "title": "Parameters",
+          "type": "object"
+        },
+        "expected_outcome": {
+          "description": "What success looks like.",
+          "minLength": 1,
+          "title": "Expected Outcome",
+          "type": "string"
+        },
+        "retry_limit": {
+          "default": 3,
+          "description": "Maximum retry attempts.",
+          "minimum": 0,
+          "title": "Retry Limit",
+          "type": "integer"
+        },
+        "status": {
+          "$ref": "#/$defs/NodeStatus",
+          "default": "pending",
+          "description": "Current lifecycle status of this node."
+        },
+        "result": {
+          "additionalProperties": true,
+          "description": "Execution result (populated after execution).",
+          "title": "Result",
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "description",
+        "expected_outcome"
+      ],
+      "title": "TaskGraphNode",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Execution strategy constructed by the Planner.\n\nRepresents the Planner's proposed execution structure.\nIt does not contain live AgentState or decide how execution\nproceeds at runtime.",
+  "properties": {
+    "id": {
+      "description": "Unique identifier for this graph.",
+      "minLength": 1,
+      "title": "Id",
+      "type": "string"
+    },
+    "nodes": {
+      "description": "Ordered list of steps in the task.",
+      "items": {
+        "$ref": "#/$defs/TaskGraphNode"
+      },
+      "title": "Nodes",
+      "type": "array"
+    },
+    "edges": {
+      "description": "Dependency relationships between nodes.",
+      "items": {
+        "$ref": "#/$defs/TaskGraphEdge"
+      },
+      "title": "Edges",
+      "type": "array"
+    },
+    "entry_node_id": {
+      "description": "ID of the first node to execute.",
+      "minLength": 1,
+      "title": "Entry Node Id",
+      "type": "string"
+    },
+    "metadata": {
+      "additionalProperties": true,
+      "description": "Graph-level metadata.",
+      "title": "Metadata",
+      "type": "object"
+    }
+  },
+  "required": [
+    "id",
+    "entry_node_id"
+  ],
+  "title": "TaskGraph",
+  "type": "object"
+}

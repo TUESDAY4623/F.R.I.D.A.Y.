@@ -1,0 +1,9 @@
+{
+  "type": "string",
+  "enum": [
+    "sequence",
+    "condition",
+    "alternative"
+  ],
+  "description": "Type of dependency relationship between graph nodes."
+}

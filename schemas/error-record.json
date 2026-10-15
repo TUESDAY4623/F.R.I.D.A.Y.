@@ -1,0 +1,42 @@
+{
+  "additionalProperties": false,
+  "description": "A single recorded error. Stored in AgentState.errors (append-only).",
+  "properties": {
+    "code": {
+      "description": "Error code.",
+      "minLength": 1,
+      "title": "Code",
+      "type": "string"
+    },
+    "message": {
+      "description": "Human-readable description of the error.",
+      "minLength": 1,
+      "title": "Message",
+      "type": "string"
+    },
+    "recoverable": {
+      "description": "Whether retry/recovery is possible.",
+      "title": "Recoverable",
+      "type": "boolean"
+    },
+    "context": {
+      "additionalProperties": true,
+      "description": "Additional error context.",
+      "title": "Context",
+      "type": "object"
+    },
+    "timestamp": {
+      "description": "When the error occurred.",
+      "format": "date-time",
+      "title": "Timestamp",
+      "type": "string"
+    }
+  },
+  "required": [
+    "code",
+    "message",
+    "recoverable"
+  ],
+  "title": "ErrorRecord",
+  "type": "object"
+}

@@ -1,0 +1,9 @@
+{
+  "type": "string",
+  "enum": [
+    "single-step",
+    "multi-step",
+    "exploratory"
+  ],
+  "description": "High-level classification of task structure."
+}
