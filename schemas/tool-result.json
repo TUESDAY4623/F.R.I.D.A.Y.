@@ -1,0 +1,91 @@
+{
+  "$defs": {
+    "ErrorRecord": {
+      "additionalProperties": false,
+      "description": "A single recorded error. Stored in AgentState.errors (append-only).",
+      "properties": {
+        "code": {
+          "description": "Error code.",
+          "minLength": 1,
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "description": "Human-readable description of the error.",
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "recoverable": {
+          "description": "Whether retry/recovery is possible.",
+          "title": "Recoverable",
+          "type": "boolean"
+        },
+        "context": {
+          "additionalProperties": true,
+          "description": "Additional error context.",
+          "title": "Context",
+          "type": "object"
+        },
+        "timestamp": {
+          "description": "When the error occurred.",
+          "format": "date-time",
+          "title": "Timestamp",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "recoverable"
+      ],
+      "title": "ErrorRecord",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The result of executing a tool through the Tool Manager (ADR 07).\n\nEvery tool execution returns a ToolResult. On failure the ``error``\nfield carries an ErrorRecord; the Tool Manager then hands the result to\nthe Orchestrator, which records it and routes it to Error Recovery\n(ADR 11) when unsuccessful.\n\nFailure/error consistency follows the Observation convention (ADR 04):\na result that did not succeed must carry an ErrorRecord. This is a\none-directional invariant — ``success=False`` requires ``error`` to be\npresent. A successful result is not required to have ``error`` absent,\nmatching Observation, which enforces only the failure direction.\n\n``data`` and ``metadata`` have no required-content rule: both default\nto an empty object so that a result may omit them (e.g. a failure with\nno payload). No condition-specific keys are invented for them.",
+  "properties": {
+    "success": {
+      "description": "Whether the execution succeeded.",
+      "title": "Success",
+      "type": "boolean"
+    },
+    "data": {
+      "additionalProperties": true,
+      "description": "Result data (if successful).",
+      "title": "Data",
+      "type": "object"
+    },
+    "error": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ErrorRecord"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Error details (if failed) — see ADR 04 ErrorRecord."
+    },
+    "duration_ms": {
+      "description": "Execution duration in milliseconds.",
+      "minimum": 0,
+      "title": "Duration Ms",
+      "type": "integer"
+    },
+    "metadata": {
+      "additionalProperties": true,
+      "description": "Additional result metadata.",
+      "title": "Metadata",
+      "type": "object"
+    }
+  },
+  "required": [
+    "success",
+    "duration_ms"
+  ],
+  "title": "ToolResult",
+  "type": "object"
+}

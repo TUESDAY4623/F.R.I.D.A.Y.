@@ -89,10 +89,20 @@ Describes the condition a WAIT decision monitors.
 WaitCondition
 ├── description: string    // Human-readable description of the condition
 ├── condition_type: string // "file_presence" | "process_start" | "time_delay" | "external_event"
-├── parameters: object     // Condition-specific parameters
-├── timeout_ms: number     // Maximum wait duration
-└── poll_interval_ms: number // How often to check (if applicable)
+├── parameters: object     // Condition-specific parameters (optional; defaults to {} when omitted)
+├── timeout_ms: number     // Maximum wait duration (required, positive)
+└── poll_interval_ms: number // How often to check the condition in milliseconds (required, positive)
 ```
+
+### WaitCondition Field Contract
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `description` | string | yes | — | Human-readable description of the condition. |
+| `condition_type` | string | yes | — | One of: `file_presence`, `process_start`, `time_delay`, `external_event`. |
+| `parameters` | object | no | `{}` | Condition-specific parameters. May be omitted; when omitted, defaults to an empty object. An explicitly supplied empty object is valid when the condition needs no additional parameters. |
+| `timeout_ms` | number | yes | — | Maximum wait duration in milliseconds. Must be positive. |
+| `poll_interval_ms` | number | yes | — | How often to check the condition, in milliseconds. Must be positive. Required for every `WaitCondition` regardless of `condition_type`. |
 
 ## Core Types
 

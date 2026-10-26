@@ -1,0 +1,55 @@
+{
+  "$defs": {
+    "WaitConditionType": {
+      "description": "The kind of external condition a WAIT decision monitors (ADR 04).",
+      "enum": [
+        "file_presence",
+        "process_start",
+        "time_delay",
+        "external_event"
+      ],
+      "title": "WaitConditionType",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Describes the external condition a WAIT decision monitors (ADR 04).\n\nCarried as part of the WAIT decision's execution context. This is a\ndata contract only — the polling and timeout enforcement are owned by\nthe Agent Orchestrator at runtime.",
+  "properties": {
+    "description": {
+      "description": "Human-readable description of the condition.",
+      "minLength": 1,
+      "title": "Description",
+      "type": "string"
+    },
+    "condition_type": {
+      "$ref": "#/$defs/WaitConditionType",
+      "description": "Type of condition: \"file_presence\", \"process_start\", \"time_delay\", or \"external_event\"."
+    },
+    "parameters": {
+      "additionalProperties": true,
+      "description": "Condition-specific parameters.",
+      "title": "Parameters",
+      "type": "object"
+    },
+    "timeout_ms": {
+      "description": "Maximum wait duration in milliseconds.",
+      "exclusiveMinimum": 0,
+      "title": "Timeout Ms",
+      "type": "integer"
+    },
+    "poll_interval_ms": {
+      "description": "How often to check the condition, in milliseconds.",
+      "exclusiveMinimum": 0,
+      "title": "Poll Interval Ms",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "description",
+    "condition_type",
+    "timeout_ms",
+    "poll_interval_ms"
+  ],
+  "title": "WaitCondition",
+  "type": "object"
+}

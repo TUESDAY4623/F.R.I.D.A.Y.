@@ -1,0 +1,53 @@
+{
+  "additionalProperties": false,
+  "description": "The Policy Engine's verdict on a proposed action.\n\nReturned by ``IPolicyEngine.validate()``. ``approval_token`` carries the\ntoken string for approved actions. The richer ``ApprovalToken`` model\n(with expiry and conditions) is a separate contract; PolicyResult carries\nthe flat string form documented in ADR 04.",
+  "properties": {
+    "approved": {
+      "description": "Whether the action is approved.",
+      "title": "Approved",
+      "type": "boolean"
+    },
+    "reason": {
+      "description": "Explanation, especially for denials.",
+      "minLength": 1,
+      "title": "Reason",
+      "type": "string"
+    },
+    "conditions": {
+      "description": "Conditions attached to the approval (e.g., \"read-only\").",
+      "items": {
+        "type": "string"
+      },
+      "title": "Conditions",
+      "type": "array"
+    },
+    "rule_triggers": {
+      "description": "Which policy rules were evaluated.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Rule Triggers",
+      "type": "array"
+    },
+    "approval_token": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Token for approved actions (present when approved).",
+      "title": "Approval Token"
+    }
+  },
+  "required": [
+    "approved",
+    "reason"
+  ],
+  "title": "PolicyResult",
+  "type": "object"
+}

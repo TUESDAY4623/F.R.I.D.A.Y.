@@ -53,6 +53,18 @@ from jarvis.contracts.models.group_c import (
     WaitDecision,
     WaitParams,
 )
+from jarvis.contracts.models.group_d import (
+    PolicyResult,
+    ProposedAction,
+    ToolResult,
+    ValidationError_,
+    ValidationResult,
+)
+from jarvis.contracts.models.group_e import (
+    UserResponse,
+    WaitCondition,
+    WaitConditionType,
+)
 
 __all__ = [
     # Group A
@@ -105,4 +117,14 @@ __all__ = [
     # Group C — runtime
     "RuntimeConfig",
     "AgentState",
+    # Group D — execution boundary
+    "ValidationError_",
+    "ValidationResult",
+    "ProposedAction",
+    "PolicyResult",
+    "ToolResult",
+    # Group E — user interaction
+    "UserResponse",
+    "WaitCondition",
+    "WaitConditionType",
 ]

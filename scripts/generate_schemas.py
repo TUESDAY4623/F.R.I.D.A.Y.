@@ -51,6 +51,18 @@ from jarvis.contracts.models.group_c import (
     RuntimeConfig,
     AgentState,
 )
+from jarvis.contracts.models.group_d import (
+    ValidationError_,
+    ValidationResult,
+    ProposedAction,
+    PolicyResult,
+    ToolResult,
+)
+from jarvis.contracts.models.group_e import (
+    UserResponse,
+    WaitCondition,
+    WaitConditionType,
+)
 
 
 SCHEMA_DIR = Path(__file__).resolve().parent.parent / "schemas"
@@ -136,6 +148,19 @@ def generate_all() -> None:
     generated.append(("runtime-config", write_schema(RuntimeConfig, "runtime-config.json")))
     generated.append(("agent-state", write_schema(AgentState, "agent-state.json")))
 
+    # Group D — validation
+    generated.append(("validation-error", write_schema(ValidationError_, "validation-error.json")))
+    generated.append(("validation-result", write_schema(ValidationResult, "validation-result.json")))
+
+    # Group D — execution boundary
+    generated.append(("proposed-action", write_schema(ProposedAction, "proposed-action.json")))
+    generated.append(("policy-result", write_schema(PolicyResult, "policy-result.json")))
+    generated.append(("tool-result", write_schema(ToolResult, "tool-result.json")))
+
+    # Group E — user interaction
+    generated.append(("user-response", write_schema(UserResponse, "user-response.json")))
+    generated.append(("wait-condition", write_schema(WaitCondition, "wait-condition.json")))
+
     # Enums as simple string schemas
     for name, enum_cls in [
         ("entity-type", EntityType),
@@ -147,6 +172,7 @@ def generate_all() -> None:
         ("edge-type", EdgeType),
         ("decision-type", DecisionType),
         ("task-status", TaskStatus),
+        ("wait-condition-type", WaitConditionType),
     ]:
         enum_schema = {
             "type": "string",

@@ -1,0 +1,31 @@
+{
+  "additionalProperties": false,
+  "description": "A single parameter-validation failure.\n\nNamed ``ValidationError_`` because ``ValidationError`` is already taken\nby Pydantic. The canonical contract name documented in ADR 04 is\n``ValidationError``; the trailing underscore is the Python-side\nidentifier only — the JSON schema and external contract name remain\n``ValidationError``.",
+  "properties": {
+    "field": {
+      "description": "The field that failed validation.",
+      "minLength": 1,
+      "title": "Field",
+      "type": "string"
+    },
+    "message": {
+      "description": "Human-readable description of the failure.",
+      "minLength": 1,
+      "title": "Message",
+      "type": "string"
+    },
+    "code": {
+      "description": "Machine-readable error code.",
+      "minLength": 1,
+      "title": "Code",
+      "type": "string"
+    }
+  },
+  "required": [
+    "field",
+    "message",
+    "code"
+  ],
+  "title": "ValidationError",
+  "type": "object"
+}
