@@ -1,0 +1,27 @@
+{
+  "additionalProperties": false,
+  "description": "Parameters for a COMPLETE decision.",
+  "properties": {
+    "summary": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Description of the completed task.",
+      "title": "Summary"
+    },
+    "result": {
+      "additionalProperties": true,
+      "description": "Final result data.",
+      "title": "Result",
+      "type": "object"
+    }
+  },
+  "title": "CompleteParams",
+  "type": "object"
+}

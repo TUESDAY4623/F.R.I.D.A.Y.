@@ -1,0 +1,107 @@
+{
+  "$defs": {
+    "RetryParams": {
+      "additionalProperties": false,
+      "description": "Parameters for a RETRY decision.",
+      "properties": {
+        "target_node_id": {
+          "description": "The node to retry.",
+          "minLength": 1,
+          "title": "Target Node Id",
+          "type": "string"
+        },
+        "adjusted_params": {
+          "additionalProperties": true,
+          "description": "Modified parameters for the retry.",
+          "title": "Adjusted Params",
+          "type": "object"
+        },
+        "retry_count": {
+          "description": "Current retry attempt number (1-indexed) — the Decision Engine's reasoning about the attempt. AgentState.retry_count is authoritative for enforcement.",
+          "minimum": 1,
+          "title": "Retry Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "target_node_id",
+        "retry_count"
+      ],
+      "title": "RetryParams",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Decision: repeat the last failed action.",
+  "properties": {
+    "id": {
+      "description": "Unique decision identifier.",
+      "minLength": 1,
+      "title": "Id",
+      "type": "string"
+    },
+    "reasoning": {
+      "description": "LLM's reasoning for this decision.",
+      "minLength": 1,
+      "title": "Reasoning",
+      "type": "string"
+    },
+    "confidence": {
+      "description": "Decision confidence (0.0–1.0).",
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Confidence",
+      "type": "number"
+    },
+    "target_node_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Denormalized convenience copy per ADR 04; the corresponding decision parameter model's `target_node_id` is authoritative and must not be overridden by this field. No schema-level cross-field consistency rule is enforced.",
+      "title": "Target Node Id"
+    },
+    "retry_count": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Decision Engine's reasoning about the current retry attempt (1-indexed). AgentState.retry_count is authoritative — the Orchestrator must not trust this field over AgentState.retry_count.",
+      "title": "Retry Count"
+    },
+    "timestamp": {
+      "description": "When this decision was produced.",
+      "format": "date-time",
+      "title": "Timestamp",
+      "type": "string"
+    },
+    "type": {
+      "const": "RETRY",
+      "default": "RETRY",
+      "title": "Type",
+      "type": "string"
+    },
+    "parameters": {
+      "$ref": "#/$defs/RetryParams"
+    }
+  },
+  "required": [
+    "id",
+    "reasoning",
+    "confidence",
+    "parameters"
+  ],
+  "title": "RetryDecision",
+  "type": "object"
+}

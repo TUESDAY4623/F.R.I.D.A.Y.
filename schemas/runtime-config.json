@@ -1,0 +1,36 @@
+{
+  "additionalProperties": false,
+  "description": "Runtime limits enforced by the Agent Orchestrator.\n\nThese are not task-specific — they apply to every task execution.\nThe Orchestrator owns enforcement of these limits; no other component\nenforces them.",
+  "properties": {
+    "max_retries": {
+      "default": 3,
+      "description": "Maximum number of RETRY decisions for a single node.",
+      "minimum": 0,
+      "title": "Max Retries",
+      "type": "integer"
+    },
+    "max_replans": {
+      "default": 3,
+      "description": "Maximum number of REPLAN decisions for a single task.",
+      "minimum": 0,
+      "title": "Max Replans",
+      "type": "integer"
+    },
+    "global_timeout_ms": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Maximum task execution duration in milliseconds. Per-task limit, distinct from the per-decision timeout_ms used by WAIT decisions. Enforcement is deferred to a future implementation phase.",
+      "title": "Global Timeout Ms"
+    }
+  },
+  "title": "RuntimeConfig",
+  "type": "object"
+}

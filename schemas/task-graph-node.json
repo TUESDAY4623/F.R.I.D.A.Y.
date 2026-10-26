@@ -1,0 +1,77 @@
+{
+  "$defs": {
+    "NodeStatus": {
+      "description": "Lifecycle status of a TaskGraph node.",
+      "enum": [
+        "pending",
+        "active",
+        "completed",
+        "failed",
+        "skipped",
+        "retrying"
+      ],
+      "title": "NodeStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A single step in the task execution graph.\n\nRepresents a task objective using only documented fields.",
+  "properties": {
+    "id": {
+      "description": "Unique node identifier.",
+      "minLength": 1,
+      "title": "Id",
+      "type": "string"
+    },
+    "type": {
+      "description": "Action type (e.g., tool_call, observe, ask_user).",
+      "minLength": 1,
+      "title": "Type",
+      "type": "string"
+    },
+    "description": {
+      "description": "Human-readable description of this step.",
+      "minLength": 1,
+      "title": "Description",
+      "type": "string"
+    },
+    "parameters": {
+      "additionalProperties": true,
+      "description": "Parameters for the action.",
+      "title": "Parameters",
+      "type": "object"
+    },
+    "expected_outcome": {
+      "description": "What success looks like.",
+      "minLength": 1,
+      "title": "Expected Outcome",
+      "type": "string"
+    },
+    "retry_limit": {
+      "default": 3,
+      "description": "Maximum retry attempts.",
+      "minimum": 0,
+      "title": "Retry Limit",
+      "type": "integer"
+    },
+    "status": {
+      "$ref": "#/$defs/NodeStatus",
+      "default": "pending",
+      "description": "Current lifecycle status of this node."
+    },
+    "result": {
+      "additionalProperties": true,
+      "description": "Execution result (populated after execution).",
+      "title": "Result",
+      "type": "object"
+    }
+  },
+  "required": [
+    "id",
+    "type",
+    "description",
+    "expected_outcome"
+  ],
+  "title": "TaskGraphNode",
+  "type": "object"
+}

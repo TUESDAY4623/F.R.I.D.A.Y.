@@ -1,0 +1,23 @@
+{
+  "additionalProperties": false,
+  "description": "Parameters for a REPLAN decision.",
+  "properties": {
+    "replan_reason": {
+      "description": "Why replanning is needed.",
+      "minLength": 1,
+      "title": "Replan Reason",
+      "type": "string"
+    },
+    "preserve_completed": {
+      "default": true,
+      "description": "Whether to keep completed nodes.",
+      "title": "Preserve Completed",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "replan_reason"
+  ],
+  "title": "ReplanParams",
+  "type": "object"
+}

@@ -1,0 +1,23 @@
+{
+  "additionalProperties": false,
+  "description": "Parameters for an EXECUTE decision.",
+  "properties": {
+    "target_node_id": {
+      "description": "The Task Graph node to execute.",
+      "minLength": 1,
+      "title": "Target Node Id",
+      "type": "string"
+    },
+    "tool_params": {
+      "additionalProperties": true,
+      "description": "Parameters to pass to the tool.",
+      "title": "Tool Params",
+      "type": "object"
+    }
+  },
+  "required": [
+    "target_node_id"
+  ],
+  "title": "ExecuteParams",
+  "type": "object"
+}

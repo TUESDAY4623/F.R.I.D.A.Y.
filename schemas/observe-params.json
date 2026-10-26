@@ -1,0 +1,27 @@
+{
+  "additionalProperties": false,
+  "description": "Parameters for an OBSERVE decision.",
+  "properties": {
+    "observation_target": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "What to observe.",
+      "title": "Observation Target"
+    },
+    "observation_params": {
+      "additionalProperties": true,
+      "description": "Parameters for the observation.",
+      "title": "Observation Params",
+      "type": "object"
+    }
+  },
+  "title": "ObserveParams",
+  "type": "object"
+}

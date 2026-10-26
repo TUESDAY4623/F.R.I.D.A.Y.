@@ -1,0 +1,9 @@
+{
+  "type": "string",
+  "enum": [
+    "low",
+    "medium",
+    "high"
+  ],
+  "description": "Task Profiler's assessment of task complexity."
+}
