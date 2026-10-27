@@ -1,0 +1,65 @@
+{
+  "$defs": {
+    "ValidationError_": {
+      "additionalProperties": false,
+      "description": "A single parameter-validation failure.\n\nNamed ``ValidationError_`` because ``ValidationError`` is already taken\nby Pydantic. The canonical contract name documented in ADR 04 is\n``ValidationError``; the trailing underscore is the Python-side\nidentifier only — the JSON schema and external contract name remain\n``ValidationError``.",
+      "properties": {
+        "field": {
+          "description": "The field that failed validation.",
+          "minLength": 1,
+          "title": "Field",
+          "type": "string"
+        },
+        "message": {
+          "description": "Human-readable description of the failure.",
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "code": {
+          "description": "Machine-readable error code.",
+          "minLength": 1,
+          "title": "Code",
+          "type": "string"
+        }
+      },
+      "required": [
+        "field",
+        "message",
+        "code"
+      ],
+      "title": "ValidationError",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Outcome of validating tool parameters or inputs.\n\nReturned by the Tool Manager's ``validate_params()`` method and by\nindividual tool ``validate_params()`` implementations.",
+  "properties": {
+    "valid": {
+      "description": "Whether the input passed validation.",
+      "title": "Valid",
+      "type": "boolean"
+    },
+    "errors": {
+      "description": "Validation errors. Must be empty when valid is True.",
+      "items": {
+        "$ref": "#/$defs/ValidationError_"
+      },
+      "title": "Errors",
+      "type": "array"
+    },
+    "warnings": {
+      "description": "Non-blocking warnings.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Warnings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "valid"
+  ],
+  "title": "ValidationResult",
+  "type": "object"
+}

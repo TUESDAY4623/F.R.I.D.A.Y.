@@ -36,7 +36,7 @@ ToolResult
 ├── success: boolean           // Whether the execution succeeded
 ├── data: object               // Result data (if successful)
 ├── error: ErrorRecord          // Error details (if failed) — (see ADR 04)
-├── duration_ms: number        // Execution duration
+├── duration_ms: integer ≥ 0    // Execution duration in milliseconds
 └── metadata: object           // Additional result metadata
 ```
 

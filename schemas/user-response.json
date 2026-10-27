@@ -1,0 +1,56 @@
+{
+  "additionalProperties": false,
+  "description": "The user's reply to an ASK_USER decision.\n\nCarried in Agent State as an observation after the user responds.\n``response_id`` links back to the originating ASK_USER decision.",
+  "properties": {
+    "response_id": {
+      "description": "Links to the ASK_USER prompt.",
+      "minLength": 1,
+      "title": "Response Id",
+      "type": "string"
+    },
+    "task_id": {
+      "description": "The task this response belongs to.",
+      "minLength": 1,
+      "title": "Task Id",
+      "type": "string"
+    },
+    "answer": {
+      "description": "The user's answer text.",
+      "minLength": 1,
+      "title": "Answer",
+      "type": "string"
+    },
+    "selected_option": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Selected option, if predefined options were offered.",
+      "title": "Selected Option"
+    },
+    "confirmed": {
+      "description": "Whether the user confirmed or declined.",
+      "title": "Confirmed",
+      "type": "boolean"
+    },
+    "timestamp": {
+      "description": "When the response was received.",
+      "format": "date-time",
+      "title": "Timestamp",
+      "type": "string"
+    }
+  },
+  "required": [
+    "response_id",
+    "task_id",
+    "answer",
+    "confirmed"
+  ],
+  "title": "UserResponse",
+  "type": "object"
+}

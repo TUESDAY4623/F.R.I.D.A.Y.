@@ -1,0 +1,10 @@
+{
+  "type": "string",
+  "enum": [
+    "file_presence",
+    "process_start",
+    "time_delay",
+    "external_event"
+  ],
+  "description": "The kind of external condition a WAIT decision monitors (ADR 04)."
+}
