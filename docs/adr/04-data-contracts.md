@@ -81,6 +81,12 @@ UserResponse
 └── timestamp: DateTime
 ```
 
+### UserResponse Field Contract
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `timestamp` | DateTime | no | current UTC time, generated on creation | Time the user response was received. |
+
 ### WaitCondition
 
 Describes the condition a WAIT decision monitors.
