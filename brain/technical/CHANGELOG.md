@@ -12,7 +12,7 @@ Last verified: commit `c5db884` (tip of `main` / `origin/main`, 2026-10-28).
 
 | Date | Commit(s) | Change |
 |---|---|---|
-| 10-11 | `59d35f4` | **Phase 0 complete + Phase 1 Group A.** 13 ADRs (`docs/adr/00`–`13`); Group A contracts (`Request`, `LayaClassification`, `Intent`, `ExtractedEntity` + 3 enums) with 7 generated schemas; 68 tests passing at merge. |
+| 10-11 | `59d35f4` | **Phase 0 complete + Phase 1 Group A.** 14 ADR files (`docs/adr/00`–`13`; the commit message says "13 ADRs" — the tree added 14, including the project overview); Group A contracts (`Request`, `LayaClassification`, `Intent`, `ExtractedEntity` + 3 enums) with 7 generated schemas; 68 tests passing at merge. |
 | 10-11 | `031c27a` | **Repository reset.** Removed the entire pre-reset implementation (tools, orchestrator, logger, UI, recovery, `main.py`, `jarvis_ui.py`, old tests, `progress.md`, `documentation.md`, `uv.lock`, CI workflow). Kept ADRs + Group A contracts. `pyproject.toml` rewritten as `jarvis-contracts` package. |
 | 10-12 | `a4a1c79` | Created `brain/` folder (contains only the 2-byte scratch file `brain/temp`). |
 | 10-15 | `ecdb343` | Group B contracts: `TaskProfile`, `TaskGraph(+Node/Edge)`, enums `TaskType`/`Complexity`/`NodeStatus`/`EdgeType`. |

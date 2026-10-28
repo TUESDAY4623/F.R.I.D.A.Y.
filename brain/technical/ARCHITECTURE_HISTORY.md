@@ -48,7 +48,7 @@ Verified facts (from the commit itself):
   `src/jarvis/{tools,orchestrator,logger,intent,planner,state,recovery,ui,…}`),
   all old tests, `progress.md`, `documentation.md`, `uv.lock`,
   `.python-version`, and the CI workflow.
-- Kept: 13 ADRs (`docs/adr/00`–`13`), Group A contract models/schemas/tests.
+- Kept: 14 ADR files (`docs/adr/00`–`13`), Group A contract models/schemas/tests.
 - Rewrote `pyproject.toml` as a contracts package (`jarvis-contracts`,
   pydantic + jsonschema).
 
@@ -100,7 +100,7 @@ best-supported reconstruction."
 
 | Date | Commit(s) | Change |
 |---|---|---|
-| 10-11 | `59d35f4`, `031c27a` | New foundation: 13 ADRs, Group A contracts, repository reset |
+| 10-11 | `59d35f4`, `031c27a` | New foundation: 14 ADR files (`00`–`13`), Group A contracts, repository reset |
 | 10-12 | `a4a1c79` | `brain/` folder created (`brain/temp`) |
 | 10-15 | `ecdb343`, `0952c11` | Groups B (task-understanding) and C (agent runtime) contracts |
 | 10-26 | `9b33019` | **PR #1** merged (Groups B+C) |
