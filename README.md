@@ -1,160 +1,63 @@
-# Jarvis Desktop Agent — Architecture & File-by-File Documentation
+# FRIDAY — Jarvis Agentic Desktop AI
 
-## Phase 0 Status: Completed
-Phase 0 sets up the core foundation for the Jarvis Desktop Agent as a **modular monolith** running within a single process with strict internal module boundaries.
+**Jarvis** is an agentic desktop AI system: it understands natural-language
+requests, profiles and plans the task, then carries it out through an
+agentic control loop that observes results, verifies outcomes, and adapts.
 
-## Phase 1 Status: Completed
-Phase 1 establishes the functional, text-driven execution core. All requirements and exit criteria are verified:
-1. **Canonical 11-Step Loop End-to-End**: The 11-step execution loop runs reliably end-to-end on all 5 filesystem tools (`read_file`, `write_file`, `list_directory`, `create_directory`, `move_file`) using text input only.
-2. **Intent Analysis & Planning**: User commands are parsed by `IntentManager` and converted into structured `TaskGraph` plans by `Planner` with harmonized schemas.
-3. **Policy & Approval Gating**: `ToolManager` enforces risk-based policy controls and halts unapproved `MEDIUM`/`CONFIRM` actions while allowing approved ones.
-4. **Honest Failure Propagation**: Failed tool calls and verification mismatches trigger `TaskLifecycle.FAILED` and log `task.failed` without false completions.
-5. **UI Observability Shell**: Desktop PySide6 interface tracks tasks, streams Event Logger events, and renders a live Collapsible Tool Call Tree (`RUNNING` → `SUCCESS` / `FAILED`).
-6. **Deterministic Verification**: 100% test pass rate across 69 automated tests and zero Phase 0 regressions.
+> **Note for readers arriving from the old README:** an earlier version of
+> this project (September 2026) was a working desktop app with file tools
+> and a UI. The repository was **deliberately reset on 2026-10-11**
+> (`031c27a`) to a contracts-first foundation. That old code no longer
+> exists in the repository (it remains in git history). This README
+> describes the **current** project.
 
-## Phase 2 Status: Completed (VERIFIED / READY FOR SIGN-OFF)
-Phase 2 implements core brain verification, failure handling, recovery, retry, replanning, approval lifecycle, and Phase 2 UI integration:
-1. **5-Category Failure Classification**: Recovery Manager classifies errors into `RETRYABLE`, `RECOVERABLE`, `REPLAN_REQUIRED`, `USER_ACTION_REQUIRED`, `FATAL`.
-2. **Bounded Retries**: Transient failures (timeouts, locks) trigger automatic retries bounded by `max_retries=3`, logging `task.retry`.
-3. **Real Filesystem Auto-Recovery**: Missing parent/destination directories on `move_file` and `write_file` are automatically recovered by injecting `create_directory` into the normal pipeline, logging `task.recovery_started` and `task.recovery_completed`.
-4. **Replanning on Verification Discrepancy**: Verification mismatches trigger plan revision by `Planner.replan()`, incrementing `plan_version`, archiving previous plans, and logging `task.replan`.
-5. **Approval Lifecycle**: Explicit lifecycle (`NOT_REQUIRED`, `PENDING`, `APPROVED`, `DENIED`, `CANCELLED`, `EXPIRED`) with modal Approval Dialog and event emission (`task.approval_pending`, `task.approval_approved`, `task.approval_denied`, `task.cancelled`).
-6. **Step 1 Cancellation & Deadline Check**: Halts immediately upon cancellation or deadline expiration with `task.cancelled` or `task.timeout`.
-7. **Phase 2 UI Integration**: Modal `ApprovalDialog` (Approve/Deny/Cancel), interactive task controls (Pause/Resume/Cancel), recovery visualizer, and dynamic tool call tree.
-8. **ToolManager Execution Gateway Boundary**: Strict architecture boundary preserved; only ToolManager executes tools.
-9. **87 Automated Tests Passing**: All 69 Phase 1 regression tests + 12 Phase 2 recovery/approval tests + 6 Phase 2 UI tests pass with 0 regressions.
-10. **Manual GUI Verification Completed**: All 5 manual GUI scenarios verified (Normal Task, Missing-File Failure Propagation, Approval Workflow, Real Filesystem Auto-Recovery, Task Cancellation).
+## Current status (as of 2026-10-28, commit `c5db884`)
 
----
+- **Done & verified:** 14 architecture decision records
+  (`docs/adr/00`–`13`), a frozen set of data contracts
+  (`src/jarvis/contracts/` + 48 JSON schemas in `schemas/`), and a
+  **431-test** contract suite (passing on a local run).
+- **Next (planned, not started):** the input/understanding pipeline
+  (Input Processor → Laya → Intent Manager), then planning, runtime state,
+  the decision engine, and the orchestrator. Real tool execution is
+  intentionally deferred behind interfaces and mocks.
+- **No CI is configured** in the current tree; test evidence is local.
 
-## Repository File Catalog: Why Each File Was Created & How It Is Used
+Details, evidence, and history: see
+[**`brain/` — the project knowledge base**](brain/README.md).
 
-### 1. Root Configuration & Project Files
+## Repository layout
 
-| File | Why It Was Created | What It Is Used For |
-|---|---|---|
-| [`pyproject.toml`](pyproject.toml) | Defines project packaging, Python dependencies, build system, and test configurations. | Standard PEP 621 configuration. Specifies `hatchling` as build backend, declares runtime dependencies (`pydantic`) and dev dependencies (`pytest`), and configures pytest module discovery (`pythonpath = ["src"]`). |
-| [`uv.lock`](uv.lock) | Deterministic dependency lockfile generated by `uv`. | Ensures exact package versions and transitive dependencies are reproducible across all developer machines (Sujeet, Adarsh, Tanmay). |
-| [`.python-version`](.python-version) | Declares required Python version (3.11). | Used by `uv` and Python version managers to pin the active Python interpreter. |
-| [`.gitignore`](.gitignore) | Filters out artifacts from version control. | Excludes Python bytecode (`__pycache__`), virtual environments (`.venv`), distribution folders (`dist/`, `build/`), and IDE caches. |
-| [`progress.md`](progress.md) | Date-wise build log per work session. | Maintains an append-only timeline (newest on top) documenting what was built, test results (exact pass/fail counts), and open/blocking items. |
-| [`main.py`](main.py) | Entry point executing the Phase 0 "Hello Loop". | Exercises the entire system: wires the Event Logger, connects a live subscriber callback (demonstrating how Tanmay's UI will stream events), registers a test tool verifying the Tool Registry contract, and executes the Orchestrator's 11-step canonical loop end-to-end. |
-| [`jarvis_ui.py`](jarvis_ui.py) | PySide6 UI entry point and desktop observability shell. | Bootstraps default tool registry, launches `MainWindow` with task input, state badge, streaming log pane, and Collapsible Tool Call Tree. |
-
----
-
-### 2. Core Shared Types
-
-| File | Why It Was Created | What It Is Used For |
-|---|---|---|
-| [`src/jarvis/types.py`](src/jarvis/types.py) | Shared enum definitions for cross-cutting concepts. | Contains canonical domain enums: `RiskLevel` (`LOW`, `MEDIUM`, `HIGH`), `TaskLifecycle` (11 states from CREATED to COMPLETED/FAILED/CANCELLED per Section 8), `PolicyDecision` (`ALLOW`, `CONFIRM`, `DENY`), `ApprovalDecision` (`APPROVE`, `DENY`, `CANCEL`), and `VerificationStatus` (`PASS`, `FAIL`). Prevents circular dependencies between modules. |
-
----
-
-### 3. Event Logger Subsystem (`src/jarvis/logger/`) — First Real Component
-
-| File | Why It Was Created | What It Is Used For |
-|---|---|---|
-| [`src/jarvis/logger/__init__.py`](src/jarvis/logger/__init__.py) | Package initialization and public export interface. | Exports `EventLogger`, `get_logger`, `set_logger`, `LogEvent`, `EventType`, `LogLevel`, and `EventSensitivity`. |
-| [`src/jarvis/logger/events.py`](src/jarvis/logger/events.py) | Pydantic event schemas and event type categories per Section 13. | Defines `LogEvent`, `EventType` (covering loop steps, lifecycle changes, planning, tools, policy, approval, recovery), `LogLevel`, and human-readable string formatter `to_log_line()`. |
-| [`src/jarvis/logger/event_logger.py`](src/jarvis/logger/event_logger.py) | Thread-safe Event Logger implementation. | Ingests events, automatically redacts passwords/tokens/keys via `sanitize_value`, stores them in a memory ring buffer, optionally appends to JSONL disk storage, prints formatted lines to stderr, and invokes registered streaming callbacks (`add_subscriber`). |
-
----
-
-### 4. Tool Registry Subsystem (`src/jarvis/tools/`)
-
-| File | Why It Was Created | What It Is Used For |
-|---|---|---|
-| [`src/jarvis/tools/__init__.py`](src/jarvis/tools/__init__.py) | Package export interface for the tool subsystem. | Exports `ToolContract`, `BaseTool`, `ToolResult`, `ToolRegistry`, `get_tool_registry`, and `ToolManager`. |
-| [`src/jarvis/tools/contract.py`](src/jarvis/tools/contract.py) | Shared tool specification contract per Section 11. | Declares `ToolContract` with all 11 required fields (`name`, `description`, `input_schema`, `output_schema`, `risk_level`, `reversible`, `rollback_strategy`, `timeout`, `idempotency`, `required_capabilities`, `platform_support`). Validates safety rules: `reversible: False` must be HIGH risk; `MEDIUM` risk must have `reversible: True` + rollback strategy. Also defines abstract `BaseTool` and `ToolResult`. |
-| [`src/jarvis/tools/registry.py`](src/jarvis/tools/registry.py) | Central repository of available tools. | Validates and stores tools (`register`), checks availability (`has`), retrieves tools (`get`), and lists contracts (`list_tools`). Enforces unique tool names. |
-| [`src/jarvis/tools/manager.py`](src/jarvis/tools/manager.py) | Tool Manager execution gateway. | Dispatches actions to registered tools, validates arguments, checks policy, enforces timeouts, handles approvals, and normalizes return values into `ToolResult`. |
-| [`src/jarvis/tools/read_file.py`](src/jarvis/tools/read_file.py) | Read file tool implementation. | Reads file contents safely within workspace bounds. |
-| [`src/jarvis/tools/write_file.py`](src/jarvis/tools/write_file.py) | Write file tool implementation. | Creates or overwrites files with rollback strategy. |
-| [`src/jarvis/tools/list_directory.py`](src/jarvis/tools/list_directory.py) | List directory tool implementation. | Lists files and directories within target folder. |
-| [`src/jarvis/tools/create_directory.py`](src/jarvis/tools/create_directory.py) | Create directory tool implementation. | Creates new directories on the filesystem (MEDIUM risk, reversible with rollback strategy). |
-| [`src/jarvis/tools/move_file.py`](src/jarvis/tools/move_file.py) | Move file tool implementation. | Moves/renames files with rollback strategy. |
-| [`src/jarvis/tools/noop.py`](src/jarvis/tools/noop.py) | No-op tool implementation. | LOW risk fallback probe tool for benchmarks and Phase 0 compatibility. |
-| [`src/jarvis/bootstrap.py`](src/jarvis/bootstrap.py) | Agent bootstrap module. | Automatically registers all 5 filesystem tools and `noop_tool` into `ToolRegistry`. |
-
----
-
-### 5. Orchestrator Subsystem (`src/jarvis/orchestrator/`)
-
-| File | Why It Was Created | What It Is Used For |
-|---|---|---|
-| [`src/jarvis/orchestrator/__init__.py`](src/jarvis/orchestrator/__init__.py) | Package export interface for the Orchestrator. | Exports `AgentOrchestrator`, `CanonicalLoopStateMachine`, `LoopStep`, `LoopContext`, and `LoopStatus`. |
-| [`src/jarvis/orchestrator/loop.py`](src/jarvis/orchestrator/loop.py) | Section 2 canonical 11-step loop state machine. | Implements `CanonicalLoopStateMachine`, explicitly defining each of the 11 steps as a method that logs its own name through Event Logger and calls the owning component stub. Maintains loop data in `LoopContext`. |
-| [`src/jarvis/orchestrator/orchestrator.py`](src/jarvis/orchestrator/orchestrator.py) | Central coordinator managing the task lifecycle. | Implements `AgentOrchestrator`. Initializes tasks in `StateManager`, records lifecycle events (`TASK_CREATED`, `LOOP_START`, `LOOP_END`, `TASK_COMPLETED`), drives the state machine cycle, and returns final execution status. |
-
----
-
-### 6. Component Stubs (Section 4 Ownership Table)
-
-These stubs establish clean boundaries and typed contracts so future phases can be implemented without breaking existing code:
-
-| Module / File | Section 4 Role | Ownership & Phase 0/1/2 Behavior |
-|---|---|---|
-| [`src/jarvis/state/__init__.py`](src/jarvis/state/__init__.py) | State Manager | Owns runtime task truth (`task_id`, `lifecycle`, `plan_version`, `current_step`, `deadline`, `last_verified_state`, `retry_count`, `replan_count`, `recovery_attempts`, `previous_plans`). Manages in-memory task states. |
-| [`src/jarvis/observation/__init__.py`](src/jarvis/observation/__init__.py) | Observation Manager | Owns selecting and normalizing observation sources per surface. Returns standardized `Observation` objects. |
-| [`src/jarvis/verification/__init__.py`](src/jarvis/verification/__init__.py) | Verification Engine | Owns comparing observed state to expected outcome. Returns `VerificationResult` (`PASS`/`FAIL` + reason). |
-| [`src/jarvis/policy/__init__.py`](src/jarvis/policy/__init__.py) | Policy Engine | Owns evaluating risk tier. Returns `ALLOW`, `CONFIRM`, or `DENY` based on tool risk level. |
-| [`src/jarvis/approval/__init__.py`](src/jarvis/approval/__init__.py) | Approval Manager | Owns human-in-the-loop interaction (presenting what/target/consequences/reversibility/why via modal `ApprovalDialog`). |
-| [`src/jarvis/planner/__init__.py`](src/jarvis/planner/__init__.py) | Planner | Owns task graph generation with expected outcomes per step and replanning on verification discrepancy (`replan()`). |
-| [`src/jarvis/recovery/__init__.py`](src/jarvis/recovery/__init__.py) | Error / Recovery Manager | Owns failure taxonomy (5 categories), retry/replan budgets, backoff, and recovery plan generation. |
-| [`src/jarvis/intent/__init__.py`](src/jarvis/intent/__init__.py) | Intent / Context Manager | Owns determining user intent and extracting entities from user input. Returns `IntentResult`. |
-| [`src/jarvis/profiler/__init__.py`](src/jarvis/profiler/__init__.py) | Task Profiler | Owns structured requirements profiling (complexity, risk, privacy, latency). |
-| [`src/jarvis/input_processor/__init__.py`](src/jarvis/input_processor/__init__.py) | Input Processor | Owns STT, audio capture, text normalization, and capturing cancel signals. |
-| [`src/jarvis/memory/__init__.py`](src/jarvis/memory/__init__.py) | Memory / Conversation Manager | Owns conversation turns (short-term) and user preferences (long-term). |
-| [`src/jarvis/router/__init__.py`](src/jarvis/router/__init__.py) | LLM Router | Owns selecting model tier (local vs cloud). |
-| [`src/jarvis/resources/__init__.py`](src/jarvis/resources/__init__.py) | Resource Manager | Owns monitoring RAM/CPU/GPU/NPU and computing memory headroom. |
-| [`src/jarvis/connectivity/__init__.py`](src/jarvis/connectivity/__init__.py) | Connectivity Manager | Owns monitoring internet connectivity and offline status. |
-| [`src/jarvis/vault/__init__.py`](src/jarvis/vault/__init__.py) | Credential Vault | Owns Windows Credential Manager integration, preventing raw secret leakage. |
-| [`src/jarvis/context_budget/__init__.py`](src/jarvis/context_budget/__init__.py) | Context Budget Manager | Owns context trimming, summarization, and token budget enforcement. |
-| [`src/jarvis/response/__init__.py`](src/jarvis/response/__init__.py) | Response Manager | Owns formatting task results for Text UI and TTS audio rendering. |
-
----
-
-### 7. Test Suite (`tests/`)
-
-| File | Coverage |
+| Path | What it is |
 |---|---|
-| [`tests/test_tool_registry.py`](tests/test_tool_registry.py) | Contract fields, registration, lookups, and risk invariants. |
-| [`tests/test_event_logger.py`](tests/test_event_logger.py) | Event buffer, credential redaction, and streaming subscribers. |
-| [`tests/test_orchestrator_loop.py`](tests/test_orchestrator_loop.py) | 11-step execution sequence, step logging, and cancellation. |
-| [`tests/test_tool_manager.py`](tests/test_tool_manager.py) | Tool dispatch, validation, timeouts, and policy decisions. |
-| [`tests/test_create_directory.py`](tests/test_create_directory.py) | Directory creation contract, successful creation, and error cases. |
-| [`tests/test_write_file.py`](tests/test_write_file.py) | File write contract, writing, and overwrite logic. |
-| [`tests/test_move_file.py`](tests/test_move_file.py) | File move contract, moving files, collision prevention, and arg checks. |
-| [`tests/test_filesystem_integration.py`](tests/test_filesystem_integration.py) | Integrated filesystem tools through Tool Manager gateway. |
-| [`tests/test_phase1_sujeet_core.py`](tests/test_phase1_sujeet_core.py) | Core brain intent parsing, planning, state, and orchestrator boundaries. |
-| [`tests/test_phase1_resolution.py`](tests/test_phase1_resolution.py) | Regression verification for all 7 Phase 1 blockers and end-to-end tool flows. |
-| [`tests/test_throwaway_tools.py`](tests/test_throwaway_tools.py) | Contract proof reading and directory listing tools. |
-| [`tests/test_phase1_benchmark.py`](tests/test_phase1_benchmark.py) | Deterministic loop benchmark (sub-500ms latency, 100% pass rate). |
-| [`tests/test_ui.py`](tests/test_ui.py) | PySide6 UI window initialization, badge state, and tool tree events. |
-| [`tests/test_phase2_recovery.py`](tests/test_phase2_recovery.py) | Phase 2 failure classification, bounded retry, auto-recovery, replanning, approval lifecycle, and deadline handling. |
-| [`tests/test_phase2_ui.py`](tests/test_phase2_ui.py) | Phase 2 modal ApprovalDialog, decision bridging with ApprovalManager, and interactive task controls (Pause/Resume/Cancel). |
+| `brain/` | Knowledge base: `simple/` (plain-English) and `technical/` (engineering) layers |
+| `docs/adr/` | 14 architecture decision records (00–13) — source of truth for architecture |
+| `src/jarvis/contracts/` | Pydantic contract models, five groups (A–E) |
+| `schemas/` | 48 JSON Schemas generated from the models |
+| `scripts/generate_schemas.py` | Regenerates `schemas/` from the models |
+| `tests/contracts/` | Contract test suite (431 tests) |
+| `CLAUDE.md` | Project rules, architecture principles, and phase markers |
 
----
+## Setup
 
-## Verification & Execution Guide
+Python ≥ 3.11. Dependencies: `pydantic` and `jsonschema` (runtime);
+`pytest` (dev). There is no lockfile in the current tree.
 
-### 1. Run the Hello Loop
+## Verification
+
 ```bash
-uv run python main.py
-```
-Output verifies:
-- Registered probe tool compliant with Section 11 contract.
-- 11/11 loop steps executed in sequence, each logging its name.
-- 18 total structured events captured and streamed to subscriber.
+# Run the full contract test suite
+python -m pytest tests -q          # expected: 431 passed
 
-### 2. Run the Test Suite
-```bash
-uv run pytest -v
+# Regenerate JSON schemas and confirm no drift
+python scripts/generate_schemas.py # expected: "Generated 48 schemas"
+git status --porcelain             # expected: no changes under schemas/
 ```
-Result: 87 passed, 0 failed in ~1.0s.
 
-### 3. Run the GUI Desktop Agent
-```bash
-uv run python jarvis_ui.py
-```
+## How this project is governed
+
+`CLAUDE.md` sets the rules: the pipeline's current milestone ends at the
+Agent Orchestrator; LLMs only ever produce schema-validated structured
+decisions; downstream systems stay interfaces/mocks until later phases; and
+phases must not be skipped without approval. Architecture lives in
+`docs/adr/`; the two-layer knowledge base lives in `brain/`.
